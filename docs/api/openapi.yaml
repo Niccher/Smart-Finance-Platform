@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
-  title: M-Pesa Analyzer Platform API
-  description: Combined API contract for the M-Pesa Analyzer CodeIgniter 4 WebApp and FastAPI ML microservice.
+  title: Smart Finance Platform API
+  description: Combined API contract for the Smart Finance Platform CodeIgniter 4 WebApp and FastAPI ML microservice.
   version: 3.5.0
 servers:
   - url: http://localhost/api/v1

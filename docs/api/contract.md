@@ -1,6 +1,6 @@
-# Mobile API Contract (`/api/v1`) — Mpesa Analyzer WebApp
+# Mobile API Contract (`/api/v1`) — Smart Finance Platform
 
-This specification documents the REST API consumed by the Android mobile client (`Mpesa_Analyzer_App`).
+This specification documents the REST API consumed by the Android companion client (`Smart-Finance-Android`).
 
 ---
 

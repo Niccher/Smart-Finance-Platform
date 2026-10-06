@@ -1,13 +1,13 @@
-# FastAPI Service Handbook — ML Mpesa Analyzer
+# FastAPI Service Handbook — Smart Finance Platform
 
-This document details the code structure, background routines, telemetry endpoint, and process management of the FastAPI service located in `app/`.
+This document details the code structure, background routines, telemetry endpoint, and process management of the FastAPI service located in `ml/app/`.
 
 ---
 
 ## 1. Codebase Directory Layout
 
 ```
-app/
+ml/app/
 ├── main.py                    # Application lifespan, background poller task, core routes
 ├── config.py                  # Pydantic Settings reading environment variables
 ├── db/

@@ -9,7 +9,7 @@ Procedures for performing zero-downtime or graceful container restarts and recov
 To restart the WebApp container cleanly:
 
 ```bash
-docker compose restart webapp
+docker compose restart web
 ```
 
 Verify the container is listening on port 80:
@@ -30,7 +30,7 @@ If the application experiences stale views, locked sessions, or permission sync 
 
 ### Via Spark CLI:
 ```bash
-docker compose exec webapp php spark cache:clear
+docker compose exec web php spark cache:clear
 ```
 
 ---

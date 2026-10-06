@@ -1,6 +1,6 @@
 # Runbook: Database Backup & Restoration
 
-This runbook outlines standard operating procedures for taking, downloading, and restoring database backups in the Mpesa Analyzer WebApp.
+This runbook outlines standard operating procedures for taking, downloading, and restoring database backups in the Smart Finance Platform.
 
 ---
 
@@ -10,7 +10,7 @@ This runbook outlines standard operating procedures for taking, downloading, and
 2. Navigate to **Admin &rarr; System &rarr; Backups** (`/admin/system/backup`).
 3. Verify the **Disk Headroom** badge confirms sufficient free space (minimum 2x database size required).
 4. Click **Create Full Backup**.
-5. The system invokes `mysqldump` in the background and writes the compressed SQL snapshot into `writable/backups/`.
+5. The system invokes `mysqldump` in the background and writes the compressed SQL snapshot into `web/writable/backups/`.
 6. Click **Download** on the generated backup card to store a secure offsite copy.
 
 ---
@@ -20,13 +20,13 @@ This runbook outlines standard operating procedures for taking, downloading, and
 To create an immediate database dump from the container terminal:
 
 ```bash
-docker exec -i mpesa-analyzer-mysql mysqldump \
-  -u root -p"${MYSQL_ROOT_PASSWORD}" \
+docker compose exec -T mysql mysqldump \
+  -u root -p"${MYSQL_ROOT_PASSWORD:-root_password}" \
   --single-transaction \
   --quick \
   --routines \
   --triggers \
-  db_mpesa_analyzer > backup_$(date +%Y%m%d_%H%M%S).sql
+  ${DB_NAME:-db_mpesa_analyzer} > backup_$(date +%Y%m%d_%H%M%S).sql
 ```
 
 ---
@@ -43,9 +43,9 @@ docker exec -i mpesa-analyzer-mysql mysqldump \
 
 ### Via Command-Line:
 ```bash
-docker exec -i mpesa-analyzer-mysql mysql \
-  -u root -p"${MYSQL_ROOT_PASSWORD}" \
-  db_mpesa_analyzer < backup_to_restore.sql
+docker compose exec -T mysql mysql \
+  -u root -p"${MYSQL_ROOT_PASSWORD:-root_password}" \
+  ${DB_NAME:-db_mpesa_analyzer} < backup_to_restore.sql
 ```
 
 After restoration, verify system health:

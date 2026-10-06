@@ -1,6 +1,6 @@
 # Threat Model & Security Architecture
 
-This document presents a comprehensive STRIDE threat model analysis for the **M-Pesa Analyzer Platform**, evaluating security risks across the Android mobile client, CodeIgniter 4 WebApp, FastAPI ML microservice, and MySQL 8.4 database.
+This document presents a comprehensive STRIDE threat model analysis for the **Smart Finance Platform**, evaluating security risks across the Android mobile client, CodeIgniter 4 WebApp, FastAPI ML microservice, and MySQL 8.4 database.
 
 ---
 

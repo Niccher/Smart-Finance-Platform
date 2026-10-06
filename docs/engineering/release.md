@@ -1,6 +1,6 @@
 # Ecosystem Release & Compatibility Matrix
 
-This document tracks versioning and inter-component compatibility across the M-Pesa Analyzer ecosystem.
+This document tracks versioning and inter-component compatibility across the Smart Finance ecosystem.
 
 ---
 

@@ -1,0 +1,90 @@
+site_name: Smart Finance Platform Documentation
+site_description: Unified engineering documentation for the Smart Finance Platform Monorepo (PHP 8.3 CodeIgniter 4 WebApp, Python 3.12 FastAPI LLM Microservice, Redis 7 In-Memory Cache, MySQL 8.4 Database, and Android Companion Client Ecosystem).
+site_author: Smart Finance Engineering Team
+repo_url: https://github.com/Niccher/Smart-Finance-Platform
+repo_name: Niccher/Smart-Finance-Platform
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+
+nav:
+  - Platform Overview:
+      - Engineering Portal: docs/README.md
+      - Operator Guide: README.md
+  - User Documentation:
+      - Setup & Run: docs/user/setup-and-run.md
+      - Configuration: docs/user/configuration.md
+      - Troubleshooting: docs/user/troubleshooting.md
+  - Architecture:
+      - System Overview: docs/architecture/overview.md
+      - Communication & Sequences: docs/architecture/communication.md
+      - Data & Canonical Storage: docs/architecture/data-and-storage.md
+      - Deployment Topology: docs/architecture/deployment.md
+      - Threat Model: docs/architecture/threat-model.md
+  - API Specifications:
+      - Combined API Contract: docs/api/contract.md
+      - OpenAPI 3.0 Specification: docs/api/openapi.yaml
+  - Service Handbooks:
+      - CodeIgniter 4 WebApp: docs/services/codeigniter.md
+      - FastAPI Microservice: docs/services/fastapi.md
+      - ML & Inference Engine: docs/services/ml.md
+      - Android Companion Client: docs/services/android.md
+  - Engineering Guides:
+      - Local Development: docs/engineering/local-development.md
+      - Making Changes Safely: docs/engineering/making-changes.md
+      - Database & Migrations: docs/engineering/database.md
+      - Automated Testing: docs/engineering/testing.md
+      - Security & Cryptography: docs/engineering/security.md
+      - Release & Compatibility: docs/engineering/release.md
+      - Contributing Standards: docs/engineering/contributing.md
+      - Dev Troubleshooting: docs/engineering/troubleshooting.md
+  - Operational Runbooks:
+      - Container Restart: docs/runbooks/restart.md
+      - Backup & Restore: docs/runbooks/backup-and-restore.md
+      - AI Full Rescan: docs/runbooks/full-rescan.md
+      - Model Upgrade: docs/runbooks/model-upgrade.md
+  - Architecture Decision Records:
+      - ADR 0001 - Single Canonical SMS: docs/adr/0001-single-canonical-sms-record.md
+      - ADR 0002 - Local CPU Inference: docs/adr/0002-local-cpu-llm-vs-hosted-apis.md
+      - ADR 0003 - Monorepo Consolidation: docs/adr/0003-unified-monorepo-consolidation.md
