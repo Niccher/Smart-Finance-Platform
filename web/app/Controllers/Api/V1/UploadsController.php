@@ -51,6 +51,14 @@ class UploadsController extends BaseApiController
             $file->move($uploadPath, $newName);
             $filePath = $uploadPath . $newName;
 
+            // Store in MinIO / S3 object storage with hybrid local fallback
+            try {
+                $storage = service('storage');
+                $storage->putPayload($newName, (string) file_get_contents($filePath));
+            } catch (\Throwable $storageEx) {
+                log_message('warning', 'Storage payload upload notice: ' . $storageEx->getMessage());
+            }
+
             $data = [
                 'loot_Name' => $newName,
                 'loot_Uuid' => $uuid,
@@ -336,6 +344,19 @@ class UploadsController extends BaseApiController
                 $this->db->table('tbl_Analyzed_Transactions')->whereIn('orig_sms_id', $smsIds)->delete();
             }
             $this->db->table('tbl_Sms')->whereIn('id', $smsIds)->delete();
+        }
+
+        // Purge stored payload files from MinIO / local storage
+        $lootRows = $this->db->table('tbl_Loot')->select('loot_Name')->where('loot_Owner', $tokenStr)->get()->getResult();
+        $storage = service('storage');
+        foreach ($lootRows as $lRow) {
+            try {
+                if (!empty($lRow->loot_Name)) {
+                    $storage->deletePayload($lRow->loot_Name);
+                }
+            } catch (\Throwable $delEx) {
+                // Ignore storage deletion errors during user purge
+            }
         }
 
         $this->db->table('tbl_Loot')->where('loot_Owner', $tokenStr)->delete();

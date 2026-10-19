@@ -143,6 +143,14 @@ class UploadController extends BaseController
             
             log_message('info', 'File moved successfully to: ' . $uploadPath . $newName);
 
+            // Replicate to MinIO / S3 object storage with hybrid fallback
+            try {
+                $storage = service('storage');
+                $storage->putPayload($newName, (string) file_get_contents($uploadPath . $newName));
+            } catch (\Throwable $storageEx) {
+                log_message('warning', 'Storage payload upload notice: ' . $storageEx->getMessage());
+            }
+
             $data = [
                 'loot_Name' => $newName,
                 'loot_Owner' => $token,

@@ -217,4 +217,45 @@ graph TD
 3. **Automated Session Pruning**: CodeIgniter CLI command `php spark session:gc` automatically deletes expired records from `ci_sessions` (`timestamp < UNIX_TIMESTAMP() - expiration`), preventing MySQL table bloat.
 4. **Live Observability**: Real-time status is exposed via the public `/health` endpoint (`redis_status: "connected" | "fallback_active"`), the SuperAdmin telemetry dashboard, and an automated alert badge on the SuperAdmin navbar.
 
+---
+
+## 8. S3-Compatible Object Storage (MinIO)
+
+The platform integrates MinIO (`minio:RELEASE.2024-08-29T01-40-52Z`) as an S3-compatible object store to eliminate local container volume lock-in and support elastic multi-node deployments:
+
+```mermaid
+flowchart LR
+    subgraph Clients & Engines
+        Mobile[Android App] -->|Upload loot_*.enc| Web[CodeIgniter 4 WebApp]
+        Admin[Web Admin] -->|Trigger DB Backup| Web
+        FastAPI[FastAPI ML Service] -->|Cache Model Weights| LocalDisk[(Local /models/)]
+    end
+
+    subgraph MinIO S3 Object Store
+        Web -->|Put / Get Payload SigV4| B1[(mpesa-payloads<br/>ILM: 90 Days)]
+        Web -->|Put Backup & Presigned URL| B2[(mpesa-backups<br/>Permanent)]
+        FastAPI -->|Pull / Sync GGUF Weights| B3[(mpesa-models<br/>Permanent)]
+        Web -->|User Data Exports| B4[(mpesa-exports<br/>ILM: 7 Days)]
+    end
+```
+
+### Bucket Architecture & Lifecycle Management (ILM)
+
+| Bucket | Default Lifecycle | Content & Ingestion Pipeline | Access Pattern |
+|---|---|---|---|
+| `mpesa-payloads` | **90-Day Auto Expiration** | Client-encrypted binary blobs (`loot_*.enc`) from mobile devices | Written on ingest via `StorageService::putPayload()`; retrieved by `UploadModel` for SMS parsing. |
+| `mpesa-backups` | Persistent | Compressed database dumps (`backup_*.sql.gz`) | Written on manual/scheduled dump; served via secure pre-signed 15-minute S3 URLs. |
+| `mpesa-models` | Persistent | Quantized GGUF neural network weights (`*.gguf`) | Managed via ML admin router; synced to container `/models/` cache for memory-mapped (`mmap`) inference. |
+| `mpesa-exports` | **7-Day Auto Expiration** | Ephemeral CSV/JSON financial export files | Generated on user demand; automatically cleaned up by MinIO lifecycle engine. |
+
+### Hybrid Fallback & Zero-Downtime Migration
+
+To preserve backward compatibility with existing single-node setups and avoid downtime during migration, `App\Services\StorageService` implements a **hybrid fallback strategy**:
+- **Read Path**: When an object is requested, `StorageService::getPayload()` checks the MinIO bucket first. If missing or if MinIO is unreachable, it seamlessly falls back to the legacy local path (`WRITEPATH . 'uploads/payloads/'`). When found locally, it automatically backfills the object into MinIO in the background.
+- **Write Path**: New uploads are written to MinIO and mirrored to local disk, ensuring immediate availability for local processing scripts and background workers.
+- **Zero-Dependency Native SigV4**: CodeIgniter 4 signs requests using native PHP HMAC-SHA256 (`hash_hmac`), removing the need for the heavyweight 30MB AWS SDK in resource-constrained environments.
+- **FastAPI Model Caching**: While `llama-server` requires local POSIX paths for memory-mapping weights (`mmap`), MinIO acts as the central durable model repository. On container boot or model activation, `storage.py` checks `/models/` and pulls missing weights from `mpesa-models` automatically.
+
+For maintenance procedures, bucket replication, and console access, see the [MinIO Maintenance Runbook](../runbooks/minio-maintenance.md).
+
 

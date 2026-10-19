@@ -21,6 +21,7 @@ flowchart TD
     ML[ML Intelligence Service<br/>ml/<br/>Port 8001 / Internal 9050]
     Redis[(Redis 7 In-Memory Cache<br/>mpesa-redis<br/>Port 6379)]
     MySQL[(Shared MySQL 8.4<br/>db_mpesa_analyzer<br/>Port 3306)]
+    MinIO[(MinIO S3 Object Store<br/>mpesa-minio<br/>Ports 9000/9001)]
   end
 
   User -->|Reads SMS / Views UI / AI Chat| App
@@ -29,8 +30,10 @@ flowchart TD
   WebApp -->|Store & Fetch SMS, Logs & Chat| MySQL
   WebApp -->|Session & Cache Acceleration| Redis
   WebApp -.->|Dynamic Session Failover on Disconnect| MySQL
+  WebApp -->|Store Payloads & Backups SigV4| MinIO
   WebApp -->|Internal Proxy /api/v1/chat| ML
   ML -->|Poll & Single Canonical Write| MySQL
+  ML -->|Pull & Cache Model Weights| MinIO
   WebApp -->|Trigger Job / Rescan / Models| ML
 ```
 
@@ -44,6 +47,7 @@ flowchart TD
 | **Web & API Gateway** | `web/` | PHP 8.3, Apache, CodeIgniter 4, Shield | Decrypts payloads, persists raw SMS in `tbl_Sms`, stores persistent chat dialogues in `tbl_Chat_Messages` (with `webapp` vs `mobile` platform tracking), exposes Ace Admin dashboard, provides SweetAlert2 AJAX actions, and proxies mobile AI chat requests on port 80 to protect internal ML ports. |
 | **ML Intelligence** | `ml/` | Python 3.12, FastAPI, llama-server, Qwen2.5 1.5B / DeepSeek / Gemini | Autonomous background polling, known-sender dictionary lookup, LLM classification, batch extraction, and multi-turn financial reasoning. |
 | **Redis Cache** | Root `docker-compose.yml` | Redis 7 Alpine | In-memory session persistence, query cache, prompt acceleration, and live telemetry tracking (128 MB maxmemory with `volatile-lru`). Features automated dynamic failover to MySQL database sessions if Redis becomes unreachable. |
+| **MinIO Object Store** | Root `docker-compose.yml` | MinIO RELEASE.2024-08-29, MinIO Client (`mc`) | S3-compatible persistent storage for encrypted SMS payloads (`mpesa-payloads`), database dumps (`mpesa-backups`), GGUF neural weights (`mpesa-models`), and exports (`mpesa-exports`). Automates 90-day payload lifecycle management (ILM). |
 | **Database** | Root `docker-compose.yml` | MySQL 8.4 (InnoDB) | Central persistence for raw SMS, classification profiles, transactions, persistent chat history (`tbl_Chat_Messages`), cron execution telemetry, and audit jobs. |
 
 ---

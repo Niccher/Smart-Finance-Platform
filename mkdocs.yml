@@ -84,6 +84,7 @@ nav:
       - Backup & Restore: docs/runbooks/backup-and-restore.md
       - AI Full Rescan: docs/runbooks/full-rescan.md
       - Model Upgrade: docs/runbooks/model-upgrade.md
+      - MinIO Maintenance: docs/runbooks/minio-maintenance.md
   - Architecture Decision Records:
       - ADR 0001 - Single Canonical SMS: docs/adr/0001-single-canonical-sms-record.md
       - ADR 0002 - Local CPU Inference: docs/adr/0002-local-cpu-llm-vs-hosted-apis.md

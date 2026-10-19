@@ -94,7 +94,7 @@ class UploadModel extends Model
             $lootFile = $this->validate_and_get_loot_file($loot_uuid);
 
             // 2. Load and decrypt content
-            $decrypted = $this->decrypt_loot_file($lootFile['path']);
+            $decrypted = $this->decrypt_loot_file($lootFile['path'], $lootFile['name']);
 
             // 3. Parse JSON data
             $smsData = $this->parse_sms_json($decrypted);
@@ -830,7 +830,8 @@ class UploadModel extends Model
         $fileName = $query->getRow()->loot_Name;
         $filePath = WRITEPATH . "uploads/payloads/" . $fileName;
 
-        if (!file_exists($filePath)) {
+        $storage = service('storage');
+        if (!$storage->hasPayload($fileName) && !file_exists($filePath)) {
             throw new \RuntimeException("Loot file not found");
         }
 
@@ -840,12 +841,23 @@ class UploadModel extends Model
         ];
     }
 
-    protected function decrypt_loot_file(string $path): string {
+    protected function decrypt_loot_file(string $path, ?string $fileName = null): string {
         $cryptoHelper = new CryptoHelper();
-        $content = file_get_contents($path);
+        $storage = service('storage');
+        $name = $fileName ?: basename($path);
+
+        try {
+            $content = $storage->getPayload($name);
+        } catch (\Throwable $e) {
+            if (file_exists($path)) {
+                $content = file_get_contents($path);
+            } else {
+                throw new \RuntimeException("Failed to load payload for decryption: " . $e->getMessage());
+            }
+        }
         
-        log_message('debug', 'File path: ' . $path);
-        log_message('debug', 'File size: ' . filesize($path));
+        log_message('debug', 'File path: ' . $path . ' (name: ' . $name . ')');
+        log_message('debug', 'File size: ' . strlen($content));
         log_message('debug', 'File content first 32 bytes: ' . bin2hex(substr($content, 0, 32)));
         
         $decrypted = $cryptoHelper->decode_content($content);

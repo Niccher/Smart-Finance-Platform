@@ -43,6 +43,12 @@ from app.models.schemas import ModelDownloadRequest
 from app.services.classifier import SenderClassifier
 from app.services.extractor import MessageExtractor
 from app.services.gguf_metadata import read_gguf_metadata
+from app.services.storage import (
+    delete_model_from_minio,
+    ensure_model_cached,
+    list_minio_models,
+    upload_model_to_minio,
+)
 from app.utils.prompt_templates import DEFAULT_PROMPTS, FINANCE_CATEGORIES
 
 logger = logging.getLogger(__name__)
@@ -470,7 +476,11 @@ async def activate_model(payload: ModelActivate):
     full = os.path.join(model_dir, payload.filename)
 
     if not os.path.isfile(full):
-        if payload.filename in KNOWN_MODEL_PRESETS:
+        # Attempt to pull from MinIO models bucket first
+        cached = await asyncio.to_thread(ensure_model_cached, payload.filename)
+        if cached and os.path.isfile(cached):
+            full = cached
+        elif payload.filename in KNOWN_MODEL_PRESETS:
             task_id = uuid.uuid4().hex[:12]
             preset_url = KNOWN_MODEL_PRESETS[payload.filename]
             _download_tasks[task_id] = {
@@ -492,7 +502,8 @@ async def activate_model(payload: ModelActivate):
                 "task_id": task_id,
                 "message": f"Model '{payload.filename}' is not on disk yet. Auto-downloading and activating in background...",
             }
-        return {"status": "error", "message": f"Model file not found on disk: {payload.filename}"}
+        else:
+            return {"status": "error", "message": f"Model file not found on disk or MinIO: {payload.filename}"}
 
     # Verify GGUF header before activating to prevent crashing llama.cpp
     try:
@@ -574,6 +585,8 @@ async def upload_model(file: UploadFile = File(...)):
             return {"status": "error", "message": f"Uploaded file is too small ({round(total / 1024 / 1024, 2)} MB) to be a valid model."}
 
         os.replace(temp_upload, dest)
+        # Replicate model to MinIO models bucket in background
+        asyncio.create_task(asyncio.to_thread(upload_model_to_minio, dest, filename))
     except Exception as e:
         if os.path.exists(temp_upload):
             try:
@@ -616,6 +629,7 @@ async def delete_model(payload: ModelDelete):
 
     try:
         os.remove(full)
+        await asyncio.to_thread(delete_model_from_minio, filename)
     except Exception as e:
         return {"status": "error", "message": f"Delete failed: {e}"}
 
@@ -688,6 +702,9 @@ async def _stream_download_task(
                 _download_tasks[task_id]["size_mb"] = round(received / (1024 * 1024), 1)
                 _download_tasks[task_id]["progress_pct"] = 100.0
                 logger.info(f"Downloaded and verified model '{os.path.basename(dest_path)}' ({round(received / (1024 * 1024), 1)} MB)")
+
+                # Replicate newly downloaded model to MinIO models bucket in background
+                asyncio.create_task(asyncio.to_thread(upload_model_to_minio, dest_path, os.path.basename(dest_path)))
 
                 if auto_activate:
                     env_path = os.getenv("ENV_FILE", "/app/.env")
@@ -921,22 +938,37 @@ async def test_prompt(payload: TestPrompt):
 
 
 def _scan_models() -> list[dict]:
-    """List model files in MODEL_DIR, enriched with GGUF metadata."""
+    """List model files in MODEL_DIR, enriched with GGUF metadata and MinIO status."""
     model_dir = os.getenv("MODEL_DIR", "/models")
     active_path = getattr(settings, "model_path", None) or os.getenv("MODEL_PATH", "")
     models = []
+    seen_files = set()
     try:
         if os.path.isdir(model_dir):
             for f in sorted(os.listdir(model_dir)):
                 if f.lower().endswith((".gguf", ".bin")):
                     full = os.path.join(model_dir, f)
                     is_active = (f == os.path.basename(active_path) or full == active_path)
+                    seen_files.add(f)
                     models.append({
                         "filename": f,
                         "size_mb": round(os.path.getsize(full) / 1024 / 1024, 1),
                         "active": is_active,
                         "metadata": read_gguf_metadata(full),
+                        "cached": True,
                     })
+
+        # Discover models stored in MinIO that have not yet been cached locally
+        for m_obj in list_minio_models():
+            m_name = m_obj.get("filename")
+            if m_name and m_name not in seen_files:
+                models.append({
+                    "filename": m_name,
+                    "size_mb": m_obj.get("size_mb", 0.0),
+                    "active": False,
+                    "metadata": {},
+                    "cached": False,
+                })
     except Exception as e:
         logger.error(f"Failed to list models: {e}")
     return models

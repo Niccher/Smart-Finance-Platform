@@ -376,6 +376,16 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Could not ensure ML tables or load configs at startup: {e}")
 
     logger.info(f"Starting SMS Finance LLM service — polling every {settings.poll_interval}s")
+
+    # Cache active model from MinIO if missing locally
+    active_model_path = getattr(settings, "model_path", None) or os.getenv("MODEL_PATH", "")
+    if active_model_path and not os.path.isfile(active_model_path):
+        from app.services.storage import ensure_model_cached
+        try:
+            ensure_model_cached(os.path.basename(active_model_path))
+        except Exception as ex:
+            logger.warning(f"Could not cache active model from MinIO at startup: {ex}")
+
     _processor_task = asyncio.create_task(poll_loop())
     # Prime the allowed-senders lookup once at startup.
     await SenderClassifier.reload_allowed()

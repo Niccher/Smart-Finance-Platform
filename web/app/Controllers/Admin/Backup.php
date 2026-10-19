@@ -51,12 +51,18 @@ class Backup extends BaseController
                 'size_bytes'      => strlen($dump),
             ]);
 
-            // Save to backups directory for history
+            // Save to backups directory for history and upload to MinIO/S3
             $backupDir = dirname($filepath);
             if (!is_dir($backupDir)) {
                 mkdir($backupDir, 0775, true);
             }
             file_put_contents($filepath, $dump);
+
+            try {
+                service('storage')->putBackup($filename, $dump);
+            } catch (\Throwable $stEx) {
+                log_message('warning', 'Could not upload backup to MinIO: ' . $stEx->getMessage());
+            }
 
             // Log to tbl_Backups
             try {
@@ -108,6 +114,12 @@ class Backup extends BaseController
 
             file_put_contents($filename, $dump);
 
+            try {
+                service('storage')->putBackup(basename($filename), $dump);
+            } catch (\Throwable $stEx) {
+                log_message('warning', 'Could not upload scheduled backup to MinIO: ' . $stEx->getMessage());
+            }
+
             // Keep only last 7 backups
             $this->cleanOldBackups(7);
 
@@ -137,11 +149,21 @@ class Backup extends BaseController
         $file = basename($file);
         $path = WRITEPATH . 'backups' . DIRECTORY_SEPARATOR . $file;
         
-        if (!is_file($path)) {
-            return $this->respond(['status' => 'error', 'message' => 'File not found'], 404);
+        $storage = service('storage');
+        $deleted = false;
+
+        if (is_file($path)) {
+            $deleted = @unlink($path);
         }
 
-        if (@unlink($path)) {
+        try {
+            $storage->deleteBackup($file);
+            $deleted = true;
+        } catch (\Throwable $e) {
+            // MinIO deletion failure or not found
+        }
+
+        if ($deleted) {
             Audit::log('db_backup_delete', 'system', 'Deleted backup file', ['file' => $file]);
             return $this->respond(['status' => 'success', 'message' => 'Backup deleted']);
         }
@@ -157,8 +179,20 @@ class Backup extends BaseController
 
         $file = basename($file);
         $path = WRITEPATH . 'backups' . DIRECTORY_SEPARATOR . $file;
-        
-        if (!is_file($path)) {
+        $storage = service('storage');
+        $content = null;
+
+        if (is_file($path)) {
+            $content = file_get_contents($path);
+        } else {
+            try {
+                $content = $storage->getBackup($file);
+            } catch (\Throwable $e) {
+                return $this->respond(['status' => 'error', 'message' => 'File not found'], 404);
+            }
+        }
+
+        if ($content === null || $content === false) {
             return $this->respond(['status' => 'error', 'message' => 'File not found'], 404);
         }
 
@@ -168,8 +202,8 @@ class Backup extends BaseController
         return $this->response
             ->setHeader('Content-Type', $contentType)
             ->setHeader('Content-Disposition', 'attachment; filename="' . $file . '"')
-            ->setHeader('Content-Length', (string)filesize($path))
-            ->setBody(file_get_contents($path));
+            ->setHeader('Content-Length', (string)strlen($content))
+            ->setBody($content);
     }
 
     private function generateDump(bool $structureOnly, array $excludeTables): string
