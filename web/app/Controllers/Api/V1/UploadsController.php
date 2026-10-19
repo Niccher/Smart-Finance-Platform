@@ -151,8 +151,10 @@ class UploadsController extends BaseApiController
     {
         $modUpload = new UploadModel();
         $dated = date('Y-m-d H:i:s');
-        $token = (string) $this->request->getPost('varUser');
-        $devId = (string) $this->request->getPost('varDev');
+        $rawToken = (string) ($this->request->getPost('varUser') ?? $this->request->getGet('varUser') ?? '');
+        $devId = (string) ($this->request->getPost('varDev') ?? $this->request->getGet('varDev') ?? '');
+        $user = $this->getUserFromToken();
+        $token = $user ? ($this->resolveTokenForUser($user, $rawToken) ?? $rawToken) : $rawToken;
 
         try {
             $this->auditApiCall('get/my_uploads', $token, $devId);
@@ -204,8 +206,10 @@ class UploadsController extends BaseApiController
     {
         $modUpload = new UploadModel();
         $dated = date('Y-m-d H:i:s');
-        $token = (string) $this->request->getPost('varUser');
-        $devId = (string) $this->request->getPost('varDev');
+        $rawToken = (string) ($this->request->getPost('varUser') ?? $this->request->getGet('varUser') ?? '');
+        $devId = (string) ($this->request->getPost('varDev') ?? $this->request->getGet('varDev') ?? '');
+        $user = $this->getUserFromToken();
+        $token = $user ? ($this->resolveTokenForUser($user, $rawToken) ?? $rawToken) : $rawToken;
 
         try {
             $uploads = $modUpload->file_listing($token, $devId);
@@ -229,19 +233,20 @@ class UploadsController extends BaseApiController
         $modUpload = new UploadModel();
         $dated = date('Y-m-d H:i:s');
 
-        if (!$this->request->is('post')) {
+        if (!$this->request->is('post') && !$this->request->is('get')) {
             return $this->fail('Method not allowed', 405);
         }
 
         try {
-            $token = (string) $this->request->getPost('varUser');
-            $devId = (string) $this->request->getPost('varDev');
-            $lootUuid = (string) $this->request->getPost('varLootUuid');
-
             $user = $this->getUserFromToken();
             if (!$user) {
                 return $this->failUnauthorized('Invalid token');
             }
+
+            $rawToken = (string) ($this->request->getPost('varUser') ?? $this->request->getGet('varUser') ?? '');
+            $devId = (string) ($this->request->getPost('varDev') ?? $this->request->getGet('varDev') ?? '');
+            $lootUuid = (string) ($this->request->getPost('varLootUuid') ?? $this->request->getGet('varLootUuid') ?? '');
+            $token = $this->resolveTokenForUser($user, $rawToken) ?? $rawToken;
 
             $this->auditApiCall('get/my_summary_calculations', $token, $devId, 0, ['loot_uuid' => $lootUuid]);
             $summary = $modUpload->loot_summary($lootUuid);

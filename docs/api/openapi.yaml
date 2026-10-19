@@ -4,15 +4,15 @@ info:
   description: Combined API contract for the Smart Finance Platform CodeIgniter 4 WebApp and FastAPI ML microservice.
   version: 3.5.0
 servers:
-  - url: http://localhost/api/v1
-    description: WebApp & Mobile API Gateway
+  - url: http://localhost
+    description: WebApp & Mobile API Gateway (Port 80)
   - url: http://localhost:8001
-    description: ML Intelligence Microservice
+    description: ML Intelligence Microservice (Internal Loopback Port 8001)
 paths:
   /health:
     get:
-      summary: Health check probe
-      description: Returns liveness and service readiness status.
+      summary: WebApp Liveness & Readiness Probe
+      description: Returns service readiness, database connection state, and uptime.
       responses:
         '200':
           description: Service is healthy and operational.
@@ -27,12 +27,120 @@ paths:
                   db_configured:
                     type: boolean
                     example: true
-  /upload:
+
+  /api/v1/system/version:
+    get:
+      summary: Ecosystem Release Version
+      description: Returns software version information across the WebApp, ML microservice, and Android companion app.
+      responses:
+        '200':
+          description: Version metadata.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  version:
+                    type: string
+                    example: "3.5.0"
+                  app_name:
+                    type: string
+                    example: "Smart Finance Platform"
+
+  /api/v1/auth/login:
     post:
-      summary: Upload encrypted SMS transaction payload
-      description: Ingests an AES-128-CBC encrypted binary stream with prefixed 16-byte IV.
+      summary: User Authentication
+      description: Authenticates user credentials and issues a long-lived bearer API access token.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  example: secret123
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Authentication successful with token returned.
+
+  /api/v1/auth/register:
+    post:
+      summary: User Registration
+      description: Registers a new user account with email, username, and password.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - email
+                - username
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                username:
+                  type: string
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Registration successful.
+
+  /api/v1/auth/verify:
+    post:
+      summary: Verify API Token
+      description: Validates that an API token is active and returns the associated user identity.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Token validity status.
+
+  /api/v1/upload:
+    post:
+      summary: Upload Encrypted SMS Transaction Payload
+      description: Ingests an AES-128-CBC encrypted binary stream with a prefixed 16-byte IV.
       security:
         - BearerAuth: []
+        - ApiKeyAuth: []
       requestBody:
         required: true
         content:
@@ -54,32 +162,369 @@ paths:
                   messages_imported:
                     type: integer
                     example: 45
-  /process/for-user/{user_id}:
+
+  /api/v1/device:
     post:
-      summary: Trigger ML batch analysis for user
-      description: Spawns an asynchronous batch extraction job for unprocessed user transactions.
+      summary: Register / Fingerprint Android Device
+      description: Stores hardware, OS, and app runtime specifications for audit and device pairing.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Device registered successfully.
+
+  /api/v1/process/scan:
+    post:
+      summary: Trigger Background Rescan
+      description: Initiates transactional regex parsing and classification pipeline for the user's stored SMS payloads.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Rescan process triggered.
+
+  /api/v1/process/progress:
+    post:
+      summary: Rescan Progress Polling
+      description: Checks active processing progress of transactional imports and parsing jobs.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Progress percentage and job state.
+
+  /api/v1/financial/overview:
+    get:
+      summary: Financial Overview Summary (GET)
+      description: Returns aggregate balances, total income, total expenses, transaction counts, and time period summaries.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
-        - name: user_id
-          in: path
+        - name: varDev
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional device UUID filter.
+      responses:
+        '200':
+          description: Financial overview data.
+    post:
+      summary: Financial Overview Summary (Legacy POST)
+      description: Mobile companion POST endpoint for financial overview data.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                varUser:
+                  type: string
+                  description: Optional user token string.
+                varDev:
+                  type: string
+                  description: Optional device UUID.
+      responses:
+        '200':
+          description: Financial overview data.
+
+  /api/v1/financial/categories:
+    get:
+      summary: Category Breakdown & Transactions (GET)
+      description: Fetches transaction lists and volume aggregated by category.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - name: varCategory
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: varPage
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: varPerPage
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Transactions by category.
+    post:
+      summary: Category Breakdown & Transactions (Legacy POST)
+      description: Mobile companion POST endpoint for category transactions.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Transactions by category.
+
+  /api/v1/financial/senders:
+    get:
+      summary: Counterparty & Sender Profiles (GET)
+      description: Returns counterparty profiles, historical frequency, and total amounts sent/received.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Sender profiles list.
+    post:
+      summary: Counterparty & Sender Profiles (Legacy POST)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Sender profiles list.
+
+  /api/v1/financial/uploads:
+    get:
+      summary: Payload Upload Listing (GET)
+      description: Returns history of all SMS batch uploads with direction and category breakdowns.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Uploads list.
+    post:
+      summary: Payload Upload Listing (Legacy POST)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Uploads list.
+
+  /api/v1/financial/uploads-count:
+    get:
+      summary: Upload Count (GET)
+      description: Returns total count of processed upload batches.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Upload batch count.
+    post:
+      summary: Upload Count (Legacy POST)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Upload batch count.
+
+  /api/v1/financial/uploads-summary:
+    get:
+      summary: Upload Batch Calculation (GET)
+      description: Returns detailed transaction breakdown for a specific upload batch UUID.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - name: varLootUuid
+          in: query
           required: true
           schema:
             type: string
       responses:
         '200':
-          description: Job dispatched.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  job_id:
-                    type: integer
-                  status:
-                    type: string
-                    example: starting
+          description: Upload batch financial breakdown.
+    post:
+      summary: Upload Batch Calculation (Legacy POST)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Upload batch financial breakdown.
+
+  /api/v1/financial/health:
+    get:
+      summary: Financial Health Score (GET)
+      description: Calculates financial health index (0-100) with color indicators and personalized recommendations.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Financial health assessment.
+    post:
+      summary: Financial Health Score (Legacy POST)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Financial health assessment.
+
+  /api/v1/financial/alerts:
+    get:
+      summary: Smart Financial Alerts (GET)
+      description: Detects anomalies, spending spikes, loan due dates, and unusual counterparty activity.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Active alert notifications.
+    post:
+      summary: Smart Financial Alerts (Legacy POST)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Active alert notifications.
+
+  /api/v1/financial/recurring:
+    get:
+      summary: Recurring Subscriptions & Utility Payments (GET)
+      description: Identifies recurring monthly or weekly bills, subscriptions, and utility expenses.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Detected recurring obligations.
+    post:
+      summary: Recurring Subscriptions & Utility Payments (Legacy POST)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Detected recurring obligations.
+
+  /api/v1/financial/trends:
+    get:
+      summary: Spending Trends & Trajectory (GET)
+      description: Computes weekly/monthly velocity and comparative period trajectory.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Spending trend analysis.
+    post:
+      summary: Spending Trends & Trajectory (Legacy POST)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Spending trend analysis.
+
+  /api/v1/financial/insights:
+    get:
+      summary: AI Financial Observations (GET)
+      description: Generates automated heuristic and ML financial observations and saving tips.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Financial insight list.
+    post:
+      summary: AI Financial Observations (Legacy POST)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Financial insight list.
+
+  /api/v1/settings/profile:
+    get:
+      summary: User Profile Info (GET)
+      description: Returns username, email, account creation date, and status.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Profile details.
+    post:
+      summary: User Profile Info (Legacy POST)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Profile details.
+
+  /api/v1/settings/profile/update:
+    post:
+      summary: Update User Profile
+      description: Updates username or email address for the authenticated account.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Profile updated successfully.
+
+  /api/v1/settings/preferences:
+    get:
+      summary: User Settings & Preferences (GET)
+      description: Retrieves alert thresholds, dark mode, currency preferences, and notification options.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: User settings object.
+    post:
+      summary: User Settings & Preferences (Legacy POST)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: User settings object.
+
+  /api/v1/settings/preferences/save:
+    post:
+      summary: Save User Preferences
+      description: Persists modified user notification, theme, and threshold settings.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Preferences saved.
+
   /api/v1/chat:
     post:
-      summary: Conversational AI financial assistant
+      summary: Conversational AI Financial Assistant
       description: Contextual financial advice query with injected user spending and loan metrics.
       requestBody:
         required: true
@@ -125,9 +570,10 @@ paths:
                   tokens_used:
                     type: integer
                     example: 185
+
   /api/v1/chat/info:
     get:
-      summary: Active LLM model info
+      summary: Active LLM Model Info
       description: Returns active model name, provider, and operational status.
       responses:
         '200':
@@ -142,13 +588,14 @@ paths:
                     example: online
                   model:
                     type: string
-                    example: deepseek-chat
+                    example: qwen2.5-1.5b-instruct
                   provider:
                     type: string
-                    example: DeepSeek
+                    example: openai-compatible
+
   /api/v1/chat/history:
     get:
-      summary: Fetch persistent chat history
+      summary: Fetch Persistent Chat History
       description: Returns up to 50 previous dialogue turns for the user.
       parameters:
         - name: user_id
@@ -172,7 +619,7 @@ paths:
                     items:
                       type: object
     delete:
-      summary: Clear user chat history
+      summary: Clear User Chat History
       description: Wipes stored conversation history for the user.
       parameters:
         - name: user_id
@@ -194,8 +641,39 @@ paths:
                   message:
                     type: string
                     example: Chat history cleared.
+
+  /process/for-user/{user_id}:
+    post:
+      summary: Trigger ML Batch Analysis for User (Internal Microservice)
+      description: Spawns an asynchronous batch extraction job for unprocessed user transactions.
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job dispatched.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id:
+                    type: integer
+                  status:
+                    type: string
+                    example: starting
+
 components:
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
+      description: Standard Bearer token authentication header (Authorization: Bearer <token>)
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Token
+      description: API token passed in X-API-Token header

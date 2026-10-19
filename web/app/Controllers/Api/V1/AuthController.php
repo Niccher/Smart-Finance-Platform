@@ -11,9 +11,10 @@ class AuthController extends BaseApiController
 {
     public function login(): ResponseInterface
     {
+        $json = $this->request->getJSON(true) ?? [];
         $credentials = [
-            'email' => $this->request->getPost('email'),
-            'password' => $this->request->getPost('password'),
+            'email' => $this->request->getPost('email') ?? ($json['email'] ?? null),
+            'password' => $this->request->getPost('password') ?? ($json['password'] ?? null),
         ];
 
         if (auth()->loggedIn()){
@@ -48,9 +49,10 @@ class AuthController extends BaseApiController
     {
         $users = new UserModel();
 
-        $username = $this->request->getPost('username');
-        $email = $this->request->getPost('email');
-        $password = $this->request->getPost('password');
+        $json = $this->request->getJSON(true) ?? [];
+        $username = $this->request->getPost('username') ?? ($json['username'] ?? null);
+        $email = $this->request->getPost('email') ?? ($json['email'] ?? null);
+        $password = $this->request->getPost('password') ?? ($json['password'] ?? null);
 
         $newUser = new User([
             'username' => $username,
@@ -89,7 +91,11 @@ class AuthController extends BaseApiController
 
     public function verifyToken(): ResponseInterface
     {
-        $tokenStr = $this->request->getPost('token');
+        $json = $this->request->getJSON(true) ?? [];
+        $tokenStr = $this->request->getPost('token') 
+            ?? ($json['token'] ?? null) 
+            ?? $this->getRawToken();
+
         if (empty($tokenStr)) {
             return $this->respond(["status" => "0", "message" => "Token is required"]);
         }

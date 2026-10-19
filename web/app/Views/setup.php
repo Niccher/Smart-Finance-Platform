@@ -128,7 +128,7 @@ $systemVersion = $versionData['version'] ?? '3.2.0';
                                 </ol>
                                 <div class="bg-light p-3 rounded-3 small">
                                     <i class="fa-solid fa-circle-info text-primary me-2"></i>
-                                    <strong>Tip:</strong> The web dashboard includes automatic schema migration on startup, and MinIO automatically applies a 90-day ILM retention policy to incoming SMS payloads.
+                                    <strong>Tip:</strong> The web dashboard includes automatic schema migration on startup, and MinIO automatically applies a 90-day ILM retention policy to incoming SMS payloads. For cloud security on GCP, internal backend services (MySQL, Redis, ML microservice, MinIO API) are securely bound to <code>HOST_BIND_IP</code> (default <code>127.0.0.1</code>), ensuring only the WebApp gateway (port <code>80</code>) and MinIO Console (port <code>9001</code>) are published.
                                 </div>
                             </div>
                         </div>

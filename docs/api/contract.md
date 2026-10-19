@@ -43,19 +43,23 @@ Returns real-time processing counts for active extraction jobs.
 
 ---
 
-## 3. Financial Analytics Endpoints
+## 3. Financial Analytics Endpoints (Dual GET / POST)
+
+All read-only financial endpoints support dual-verb access: standard HTTP `GET` with Bearer headers or query parameters for REST clients, and HTTP `POST` form bodies for backward compatibility with mobile APKs.
 
 | Endpoint | Method | Purpose |
 |----------|:------:|---------|
-| `/api/v1/financial/overview` | POST | High-level inflow/outflow, total balance, and recent transaction counts. |
-| `/api/v1/financial/categories` | POST | Aggregated spending grouped by M-Pesa category (PayBill, Buy Goods, etc.). |
-| `/api/v1/financial/senders` | POST | Transaction volume grouped by counterparty / sender. |
-| `/api/v1/financial/uploads` | POST | Paginated listing of historic batch upload jobs. |
-| `/api/v1/financial/uploads-summary`| POST | Detailed summary calculation for a specific upload UUID. |
-| `/api/v1/financial/health` | POST | Algorithmic financial health score based on savings vs burn rate. |
-| `/api/v1/financial/alerts` | POST | Automated alerts (budget overruns, sudden spikes, unusual fees). |
-| `/api/v1/financial/recurring` | POST | Detected recurring subscriptions and recurring utility payments. |
-| `/api/v1/financial/trends` | POST | Multi-month trend calculations for visual charts. |
+| `/api/v1/financial/overview` | GET / POST | High-level inflow/outflow, total balance, and recent transaction counts. |
+| `/api/v1/financial/categories` | GET / POST | Aggregated spending grouped by M-Pesa category (PayBill, Buy Goods, etc.). |
+| `/api/v1/financial/senders` | GET / POST | Transaction volume grouped by counterparty / sender. |
+| `/api/v1/financial/uploads` | GET / POST | Paginated listing of historic batch upload jobs. |
+| `/api/v1/financial/uploads-count` | GET / POST | Total count and state of processed upload batches. |
+| `/api/v1/financial/uploads-summary`| GET / POST | Detailed summary calculation for a specific upload UUID (`varLootUuid`). |
+| `/api/v1/financial/health` | GET / POST | Algorithmic financial health score based on savings vs burn rate. |
+| `/api/v1/financial/alerts` | GET / POST | Automated alerts (budget overruns, sudden spikes, unusual fees). |
+| `/api/v1/financial/recurring` | GET / POST | Detected recurring subscriptions and recurring utility payments. |
+| `/api/v1/financial/trends` | GET / POST | Multi-month trend calculations for visual charts. |
+| `/api/v1/financial/insights` | GET / POST | Automated AI observations, recommendations, and spending tips. |
 
 ---
 
@@ -74,9 +78,10 @@ Returns real-time processing counts for active extraction jobs.
 
 | Endpoint | Method | Purpose |
 |----------|:------:|---------|
-| `/api/v1/settings/profile` | POST | Fetch user account profile information. |
+| `/api/v1/settings/profile` | GET / POST | Fetch user account profile information. |
 | `/api/v1/settings/profile/update` | POST | Update email, username, or contact preferences. |
-| `/api/v1/settings/preferences` | POST | Retrieve app synchronization and notification preferences. |
+| `/api/v1/settings/preferences` | GET / POST | Retrieve app synchronization and notification preferences. |
+| `/api/v1/settings/preferences/save` | POST | Persist modified user notification, theme, and threshold settings. |
 | `/api/v1/settings/delete-data` | POST | Delete all financial records and uploaded SMS while keeping account. |
 | `/api/v1/settings/delete-account`| POST | Permanently purge user account, credentials, and data. |
 | `/api/v1/system/version` | GET | Public endpoint returning current ecosystem release version and changelogs. |

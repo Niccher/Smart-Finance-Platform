@@ -32,15 +32,6 @@ $routes->set404Override();
 //$routes->get('/', 'AuthController::index');
 $routes->get('/', 'Home::index');
 $routes->get('/health', 'Home::health');
-$routes->get('/api/v1/system/version', 'Home::systemVersion');
-$routes->post('/api/v1/chat', 'Api\V1\ChatController::apiChat');
-$routes->get('/api/v1/chat/info', 'Api\V1\ChatController::apiInfo');
-$routes->get('/api/v1/chat/history', 'Api\V1\ChatController::history');
-$routes->delete('/api/v1/chat/history', 'Api\V1\ChatController::clearHistory');
-$routes->post('api/v1/chat', 'Api\V1\ChatController::apiChat');
-$routes->get('api/v1/chat/info', 'Api\V1\ChatController::apiInfo');
-$routes->get('api/v1/chat/history', 'Api\V1\ChatController::history');
-$routes->delete('api/v1/chat/history', 'Api\V1\ChatController::clearHistory');
 $routes->get('/dashboard', 'DashboardController::index', ['filter' => 'session']);
 $routes->get('/dashboard/chat', 'ChatController::index', ['filter' => 'session']);
 $routes->post('/dashboard/chat/send', 'ChatController::send', ['filter' => 'session']);
@@ -150,6 +141,9 @@ $routes->group('auth', function ($routes) {
 });
 
 $routes->group('api/v1', ['namespace' => 'App\Controllers\Api\V1'], function ($routes) {
+    // Ecosystem Release Info
+    $routes->get('system/version', '\App\Controllers\Home::systemVersion');
+
     // Auth & Core Device Endpoints
     $routes->post('auth/login', 'AuthController::login');
     $routes->post('auth/register', 'AuthController::register');
@@ -161,25 +155,25 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api\V1'], function ($r
     $routes->post('process/scan', 'UploadsController::scanTrigger');
     $routes->post('process/progress', 'UploadsController::scanProgress');
 
-    // Financial Aggregations & List Endpoints
-    $routes->post('financial/overview', 'AnalyticsController::financialOverview');
-    $routes->post('financial/categories', 'AnalyticsController::transactionsByCategory');
-    $routes->post('financial/senders', 'AnalyticsController::senderProfiles');
-    $routes->post('financial/uploads', 'UploadsController::uploadListing');
-    $routes->post('financial/uploads-count', 'UploadsController::lootUploadedCount');
-    $routes->post('financial/uploads-summary', 'UploadsController::uploadSummaryCalculation');
+    // Financial Aggregations & List Endpoints (Dual GET/POST for REST compliance & mobile backward compatibility)
+    $routes->match(['get', 'post'], 'financial/overview', 'AnalyticsController::financialOverview');
+    $routes->match(['get', 'post'], 'financial/categories', 'AnalyticsController::transactionsByCategory');
+    $routes->match(['get', 'post'], 'financial/senders', 'AnalyticsController::senderProfiles');
+    $routes->match(['get', 'post'], 'financial/uploads', 'UploadsController::uploadListing');
+    $routes->match(['get', 'post'], 'financial/uploads-count', 'UploadsController::lootUploadedCount');
+    $routes->match(['get', 'post'], 'financial/uploads-summary', 'UploadsController::uploadSummaryCalculation');
 
-    // NEW Financial Analyst Endpoints
-    $routes->post('financial/health', 'AnalyticsController::financialHealth');
-    $routes->post('financial/alerts', 'AnalyticsController::financialAlerts');
-    $routes->post('financial/recurring', 'AnalyticsController::financialRecurring');
-    $routes->post('financial/trends', 'AnalyticsController::financialTrends');
-    $routes->post('financial/insights', 'AnalyticsController::financialInsights');
+    // Financial Analyst Endpoints (Dual GET/POST)
+    $routes->match(['get', 'post'], 'financial/health', 'AnalyticsController::financialHealth');
+    $routes->match(['get', 'post'], 'financial/alerts', 'AnalyticsController::financialAlerts');
+    $routes->match(['get', 'post'], 'financial/recurring', 'AnalyticsController::financialRecurring');
+    $routes->match(['get', 'post'], 'financial/trends', 'AnalyticsController::financialTrends');
+    $routes->match(['get', 'post'], 'financial/insights', 'AnalyticsController::financialInsights');
 
     // User Settings & Utilities
-    $routes->post('settings/profile', 'SettingsController::profile');
+    $routes->match(['get', 'post'], 'settings/profile', 'SettingsController::profile');
     $routes->post('settings/profile/update', 'SettingsController::updateProfile');
-    $routes->post('settings/preferences', 'SettingsController::preferences');
+    $routes->match(['get', 'post'], 'settings/preferences', 'SettingsController::preferences');
     $routes->post('settings/preferences/save', 'SettingsController::savePreferences');
     $routes->post('settings/delete-account', 'UploadsController::deleteAccount');
     $routes->post('settings/delete-data', 'UploadsController::deleteData');

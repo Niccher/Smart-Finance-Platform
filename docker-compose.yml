@@ -16,7 +16,7 @@ services:
     image: mysql:8.4
     container_name: shared-mysql
     ports:
-      - "${MYSQL_HOST_PORT:-3306}:3306"
+      - "${HOST_BIND_IP:-127.0.0.1}:${MYSQL_HOST_PORT:-3306}:3306"
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password}
       MYSQL_DATABASE: ${DB_NAME:-db_mpesa_analyzer}
@@ -88,8 +88,8 @@ services:
     image: mpesa-analyzer-ml:latest
     container_name: ml-mpesa-analyzer
     ports:
-      - "${ML_MPESA_ANALYZER_API_PORT:-8001}:9050"
-      - "${ML_MPESA_ANALYZER_LLAMA_PORT:-8080}:8080"
+      - "${HOST_BIND_IP:-127.0.0.1}:${ML_MPESA_ANALYZER_API_PORT:-8001}:9050"
+      - "${HOST_BIND_IP:-127.0.0.1}:${ML_MPESA_ANALYZER_LLAMA_PORT:-8080}:8080"
     volumes:
       - ./ml/app:/app/app
       - ./ml/models:/models
@@ -138,7 +138,7 @@ services:
     restart: unless-stopped
     command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${HOST_BIND_IP:-127.0.0.1}:${REDIS_PORT:-6379}:6379"
     volumes:
       - redis-data:/data
     networks:
@@ -156,7 +156,7 @@ services:
     container_name: mpesa-minio
     restart: unless-stopped
     ports:
-      - "${MINIO_API_PORT:-9000}:9000"
+      - "${HOST_BIND_IP:-127.0.0.1}:${MINIO_API_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin_mpesa}

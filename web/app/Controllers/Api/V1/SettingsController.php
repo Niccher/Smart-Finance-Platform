@@ -28,8 +28,9 @@ class SettingsController extends BaseApiController
         $user = $this->getUserFromToken();
         if (!$user) return $this->failUnauthorized('Invalid token');
 
-        $username = $this->request->getPost('username');
-        $email = $this->request->getPost('email');
+        $json = $this->request->getJSON(true) ?? [];
+        $username = $this->request->getPost('username') ?? ($json['username'] ?? null);
+        $email = $this->request->getPost('email') ?? ($json['email'] ?? null);
 
         $data = [];
         if (!empty($username) && $username !== $user->username) $data['username'] = $username;
@@ -69,14 +70,15 @@ class SettingsController extends BaseApiController
                     'notify_email_alerts', 'notify_budget_alerts', 'notify_low_balance',
                     'notify_unusual_activity', 'export_default_format'];
 
+        $json = $this->request->getJSON(true) ?? [];
         $data = [];
         foreach ($fields as $f) {
-            $val = $this->request->getPost($f);
+            $val = $this->request->getPost($f) ?? ($json[$f] ?? null);
             if ($val !== null) $data[$f] = $val;
         }
 
         if (!empty($data)) {
-            $data['dashboard_widgets'] = $existing['dashboard_widgets'];
+            $data['dashboard_widgets'] = $existing['dashboard_widgets'] ?? null;
             $settingsModel->saveSettings($user->id, $data);
         }
 

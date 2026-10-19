@@ -8,15 +8,24 @@ This document details transport protocols, sequences, and security contracts bet
 
 | Source | Destination | Transport | Auth Mechanism | Dev URL | Purpose |
 |--------|-------------|-----------|----------------|---------|---------|
-| **Android App** | WebApp API | HTTP POST | Bearer SHA-256 Token | `http://10.0.2.2/api/v1/` | Payload upload, stats fetch, auth |
+| **Android App** | WebApp API | HTTP GET / POST | Bearer SHA-256 / Query / POST Token | `http://10.0.2.2/api/v1/` | Payload upload, stats fetch, auth (Dual-Verb RESTful) |
 | **Android App** | WebApp Gateway | HTTP POST | Bearer / User Token | `http://10.0.2.2/api/v1/chat` | Conversational AI financial chat |
 | **WebApp** | ML Service | HTTP POST | Internal network | `http://ml-mpesa-analyzer:9050/` | Trigger user job, rescan, health, chat |
-| **WebApp** | Redis | TCP (6379) | Socket / Host | `redis:6379` | Session storage, cache, live telemetry |
-| **WebApp** | MinIO S3 | HTTP PUT/GET (9000) | AWS SigV4 | `http://minio:9000` | Archiving payloads, backups, exports |
-| **WebApp** | MySQL | TCP (3306) | User/Password | `mysql:3306` | Web queries, Shield auth, inserts |
+| **WebApp** | Redis | TCP (6379) | Socket / Host (`HOST_BIND_IP:6379`) | `redis:6379` | Session storage, cache, live telemetry |
+| **WebApp** | MinIO S3 | HTTP PUT/GET (9000) | AWS SigV4 (`HOST_BIND_IP:9000`) | `http://minio:9000` | Archiving payloads, backups, exports |
+| **WebApp** | MySQL | TCP (3306) | User/Password (`HOST_BIND_IP:3306`) | `mysql:3306` | Web queries, Shield auth, inserts |
 | **ML Service** | MinIO S3 | HTTP GET/PUT (9000) | AWS SigV4 (boto3) | `http://minio:9000` | GGUF model distribution (`mpesa-models`) |
 | **ML Service** | MySQL | TCP (3306) | User/Password | `mysql:3306` | Polling, canonical SMS updates, metrics |
 | **FastAPI** | llama-server | HTTP POST | Localhost loopback | `http://localhost:8080/v1` | OpenAI-compatible completions |
+
+### RESTful Protocol & Header Standards (`/api/v1`)
+All mobile and external client communication routed through `/api/v1` enforces standard RESTful semantics:
+- **Dual-Verb Support**: Read-only financial analytics (`financial/*`, `settings/*`) support both standard HTTP `GET` (with Bearer headers or query parameters) and legacy mobile companion `POST` form bodies.
+- **Enforced Security & Cache Headers**:
+  - `Content-Type: application/json; charset=UTF-8`
+  - `Cache-Control: no-store, no-cache, must-revalidate`
+  - `Pragma: no-cache`
+- **Network Isolation**: In production, internal backend services (MySQL, Redis, ML microservice, MinIO API) are bound to `HOST_BIND_IP` (default `127.0.0.1`), ensuring only the WebApp gateway (port 80) and MinIO Console (port 9001) are exposed externally.
 
 ---
 

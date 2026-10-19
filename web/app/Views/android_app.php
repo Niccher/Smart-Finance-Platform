@@ -236,7 +236,7 @@ $systemVersion = $versionData['version'] ?? '3.5.0';
                             <code>POST <?= base_url('api/v1/upload') ?></code><br>
                             <span class="text-secondary opacity-75">Headers: Authorization: Bearer &lt;TOKEN_HASH&gt;</span>
                         </div>
-                        <p class="text-muted small mb-0">Payload contains timestamped AES-encrypted message arrays. On success, the server responds with batch receipt metadata and trigger statuses.</p>
+                        <p class="text-muted small mb-0">Payload contains timestamped AES-encrypted message arrays. Companion endpoints (<code>financial/*</code>, <code>settings/*</code>) operate via standard OpenAPI 3.0 REST specifications with dual GET/POST support.</p>
                     </div>
                 </div>
                 <div class="col-md-6">

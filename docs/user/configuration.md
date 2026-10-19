@@ -8,7 +8,8 @@ All multi-service configurations are managed via the `.env` file at the root of 
 
 | Variable | Service | Default | Purpose |
 |---|---|---|---|
-| `WEB_PORT` | WebApp | `80` | Host published port for the CodeIgniter dashboard |
+| `HOST_BIND_IP` | Multi-service | `127.0.0.1` | Host interface IP binding for internal services (MySQL, Redis, ML, MinIO API) to prevent public exposure |
+| `WEB_PORT` | WebApp | `80` | Host published port for the CodeIgniter dashboard (gateway accessible externally) |
 | `ML_MPESA_ANALYZER_API_PORT` | ML | `8001` | Host published port for the FastAPI microservice |
 | `ML_MPESA_ANALYZER_LLAMA_PORT` | ML | `8080` | Host published port for the local llama-server |
 | `REDIS_PORT` | Redis | `6379` | Host published port for Redis 7 Cache |

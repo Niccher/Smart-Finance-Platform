@@ -84,6 +84,7 @@ This 13-step script automatically detects your dynamic IP, verifies system RAM/d
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
+| `HOST_BIND_IP` | `127.0.0.1` | Loopback IP binding for internal services (cloud security) |
 | `WEB_PORT` | `80` | Host port for the WebApp dashboard |
 | `ML_MPESA_ANALYZER_API_PORT` | `8001` | Host port for FastAPI microservice |
 | `MYSQL_HOST_PORT` | `3306` | External port for MySQL 8.4 |
@@ -113,6 +114,7 @@ Full environment variable reference: [docs/user/configuration.md](docs/user/conf
 ## Software Engineers
 
 - **Architecture Overview**: [docs/architecture/overview.md](docs/architecture/overview.md)
+- **REST API Contract & OpenAPI 3.0**: [docs/api/contract.md](docs/api/contract.md)
 - **Inter-Service Communication**: [docs/architecture/communication.md](docs/architecture/communication.md)
 - **Data & Canonical Storage**: [docs/architecture/data-and-storage.md](docs/architecture/data-and-storage.md)
 - **CodeIgniter 4 Service**: [docs/services/codeigniter.md](docs/services/codeigniter.md)
