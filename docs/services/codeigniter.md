@@ -8,7 +8,7 @@ This handbook covers MVC architecture, Shield authentication, route definitions,
 
 ```
 web/app/
-├── Config/                  # App, Database, Filters, Routes, Shield, MlBackend, Redis
+├── Config/                  # App, Database, Filters, Routes, Shield, MlBackend, Redis, Storage
 ├── Controllers/
 │   ├── Api/V1/              # Android API controllers (Uploads, Auth, Analytics, Chat, Settings)
 │   ├── Admin/               # Admin consoles (Ml, Overview, Users, Crons, Devices, Telemetry, System)
@@ -24,7 +24,7 @@ web/app/
 ├── Filters/                 # Shield session, token, CSRF, admin filters
 ├── Helpers/                 # Date & encryption helper functions
 ├── Models/                  # ModUploads, ModUser, ModBudget, ModInsights, DeviceModel, ChatMessageModel
-├── Services/                # TelemetryService (RAM, CPU, Redis, MySQL diagnostics)
+├── Services/                # StorageService (MinIO S3 / Local fallback)
 └── Views/                   # Dashboard layouts, admin views, public marketing portals
 ```
 
@@ -45,9 +45,9 @@ The application utilizes **CodeIgniter Shield** supporting two distinct operatio
 
 ---
 
-## 3. Container Observability & Telemetry Service
+## 3. Container Observability & Telemetry Controller
 
-Real-time diagnostic metrics are orchestrated by `App\Services\TelemetryService`:
+Real-time diagnostic metrics are orchestrated by `App\Controllers\Admin\Telemetry`:
 
 - **Host & Container Headroom**: Computes used vs. free vs. total RAM, CPU core load, and disk utilization with pre-execution safety checks.
 - **Targeted MySQL Status Query**: Replaces expensive full status dumps with a focused 9-variable query (`Threads_connected`, `Threads_running`, `Max_used_connections`, `Slow_queries`, `Aborted_connects`, `Innodb_buffer_pool_reads`, `Innodb_buffer_pool_read_requests`, `Questions`, `Uptime`).
@@ -70,6 +70,7 @@ Admin consoles under `App\Controllers\Admin\System\`:
   - Full SQL database dump generation with table exclusion rules.
   - Pre-flight disk space headroom checks to prevent out-of-space container panics.
   - One-click backup creation, download, and restoration.
+  - Direct streaming to MinIO S3 bucket `mpesa-backups` with time-limited 15-minute S3 pre-signed download URLs.
 
 ---
 
@@ -83,4 +84,18 @@ Custom background tasks reside in `app/Commands/`:
 | `php spark cron:run` | `CronRun` | Executes scheduled cron definitions configured in the admin UI. |
 | `php spark data:retention` | `DataRetention` | Purges expired logs and non-essential raw cache data. |
 | `php spark uploads:cleanup` | `UploadsCleanup` | Cleans temporary binary upload streams from `writable/uploads/`. |
-| `php spark digest:weekly` | `WeeklyDigest` | Generates weekly financial digest notifications for active users. |\n
+| `php spark digest:weekly` | `WeeklyDigest` | Generates weekly financial digest notifications for active users. |
+
+---
+
+## 6. S3-Compatible Object Storage (`StorageService`)
+
+Orchestrated by `App\Services\StorageService` (configured in `web/app/Config/Storage.php`):
+
+- **Zero-SDK AWS SigV4 Signing**: Implements native PHP HMAC-SHA256 request signing (`hash_hmac`), bypassing the 30MB AWS SDK footprint for minimal container images and rapid execution.
+- **Managed S3 Buckets**:
+  - `mpesa-payloads`: Incoming encrypted SMS uploads (`loot_*.enc`) retained under a 90-day ILM auto-deletion policy.
+  - `mpesa-backups`: Compressed database dumps (`backup_*.sql.gz`) with 15-minute S3 pre-signed secure download URLs.
+  - `mpesa-models`: Quantized GGUF neural network weights distributed to the FastAPI service.
+  - `mpesa-exports`: Ephemeral CSV/JSON exports with automated 7-day ILM lifecycle expiration.
+- **Resilient Hybrid Fallback**: All writes mirror to `web/writable/` paths. If MinIO is unreachable or disabled (`STORAGE_DRIVER=local`), the service falls back to local disk storage seamlessly without raising 500 errors.

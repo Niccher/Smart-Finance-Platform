@@ -1,6 +1,6 @@
 # Smart Finance Platform — Engineering Documentation
 
-Welcome to the central engineering documentation hub for the **Smart Finance Platform** monorepo. This repository consolidates the PHP 8.3 CodeIgniter 4 WebApp, the Python 3.12 FastAPI LLM intelligence microservice (Qwen 2.5, DeepSeek, Gemini), a high-performance Redis 7 session & cache engine, and shared database operations into a unified workspace.
+Welcome to the central engineering documentation hub for the **Smart Finance Platform** monorepo. This repository consolidates the PHP 8.3 CodeIgniter 4 WebApp, the Python 3.12 FastAPI LLM intelligence microservice (Qwen 2.5, DeepSeek, Gemini), a high-performance Redis 7 session & cache engine, an on-premise MinIO S3 object store, and shared database operations into a unified workspace.
 
 If you only need to run the application using Docker, refer to the root [Operator Guide](../README.md).
 
@@ -31,6 +31,7 @@ If you only need to run the application using Docker, refer to the root [Operato
 | **Dev Troubleshooting** | [engineering/troubleshooting.md](engineering/troubleshooting.md) | Engineering debugging and stack trace analysis |
 | **Runbook: Container Restart** | [runbooks/restart.md](runbooks/restart.md) | Graceful cycling and cache purging |
 | **Runbook: Backup & Restore** | [runbooks/backup-and-restore.md](runbooks/backup-and-restore.md) | Database snapshotting and restoration |
+| **Runbook: MinIO Maintenance** | [runbooks/minio-maintenance.md](runbooks/minio-maintenance.md) | Object storage, ILM policies, and disaster recovery |
 | **Runbook: AI Rescan** | [runbooks/full-rescan.md](runbooks/full-rescan.md) | Historical loot dataset reprocessing |
 | **Runbook: Model Upgrade** | [runbooks/model-upgrade.md](runbooks/model-upgrade.md) | GGUF model upgrade & context resizing |
 | **ADR 0001: Single Canonical SMS** | [adr/0001-single-canonical-sms-record.md](adr/0001-single-canonical-sms-record.md) | Architectural decision for unified storage |

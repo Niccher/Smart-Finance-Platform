@@ -57,15 +57,21 @@ class Home extends BaseController
             $version = $versionData['version'] ?? '3.5.0';
         }
 
+        $storageService = service('storage');
+        $storageStatus  = $storageService->testConnection();
+
         $data = [
             'status'         => $dbStatus === 'ok' ? 'ok' : 'degraded',
             'database'       => $dbStatus,
             'redis_status'   => $redisAlive ? 'connected' : ($redisHost ? 'fallback_active' : 'not_configured'),
+            'storage_engine' => config('Storage')->driver,
+            'storage_status' => !empty($storageStatus['success']) ? 'connected' : 'degraded',
             'session_engine' => ($sessionConfig->driver ?? '') === \CodeIgniter\Session\Handlers\RedisHandler::class ? 'redis' : 'mysql',
             'cache_engine'   => ($cacheConfig->handler ?? '') === 'redis' ? 'redis' : 'file',
             'resilience'     => [
                 'mode'                => $redisAlive ? 'in_memory_primary' : 'persistent_fallback',
                 'failover_configured' => true,
+                'storage_fallback'    => 'local_filesystem_hybrid',
             ],
             'timestamp'      => date('c'),
             'app'            => 'Smart Finance Platform',

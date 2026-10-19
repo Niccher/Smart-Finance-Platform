@@ -121,13 +121,14 @@ $systemVersion = $versionData['version'] ?? '3.2.0';
                                 <p class="text-muted mb-3">Launch the platform on your infrastructure (Docker Compose or cloud host such as Railway) and register your administrative account.</p>
                                 <ol class="text-muted small" style="line-height: 2;">
                                     <li>If running self-hosted, clone repository and configure your <code>.env</code> database credentials.</li>
-                                    <li>Run <code>docker compose up -d</code> to spin up WebApp (port <code>8080</code>), MySQL (port <code>3306</code>), and ML Service (port <code>9050</code>).</li>
+                                    <li>Run <code>docker compose up -d</code> to spin up WebApp (port <code>80</code>), MySQL 8.4 (port <code>3306</code>), ML Service (port <code>8001</code> / <code>9050</code>), Redis 7 (port <code>6379</code>), and MinIO Object Storage (API port <code>9000</code>, Console port <code>9001</code>).</li>
+                                    <li>Verify the MinIO Web Console at <a href="http://localhost:9001" target="_blank" class="fw-semibold">http://localhost:9001</a> (default: <code>admin_mpesa</code>) where the 4 isolated buckets (<code>mpesa-payloads</code>, <code>mpesa-backups</code>, <code>mpesa-models</code>, <code>mpesa-exports</code>) are automatically provisioned.</li>
                                     <li>Navigate to <a href="<?= url_to('register') ?>" class="fw-semibold">the Registration Page</a> and create your master account.</li>
                                     <li>Log into the dashboard to access the Control Center.</li>
                                 </ol>
                                 <div class="bg-light p-3 rounded-3 small">
                                     <i class="fa-solid fa-circle-info text-primary me-2"></i>
-                                    <strong>Tip:</strong> The web dashboard includes automatic schema migration on startup.
+                                    <strong>Tip:</strong> The web dashboard includes automatic schema migration on startup, and MinIO automatically applies a 90-day ILM retention policy to incoming SMS payloads.
                                 </div>
                             </div>
                         </div>
@@ -179,7 +180,7 @@ $systemVersion = $versionData['version'] ?? '3.2.0';
                                 <p class="text-muted mb-3">Initiate your initial SMS batch upload and generate your structured financial ledger.</p>
                                 <ol class="text-muted small" style="line-height: 2;">
                                     <li>On the Android app, tap <strong>Sync SMS History</strong> to queue existing mobile money messages into local SQLite.</li>
-                                    <li>WorkManager batches and AES-256 encrypts the payload, transmitting it to <code>/api/v1/upload</code>.</li>
+                                    <li>WorkManager batches and AES-256 encrypts the payload, transmitting it to <code>/api/v1/upload</code>, which stores blobs in MinIO S3 (<code>mpesa-payloads</code> bucket with automated 90-day ILM retention) alongside local redundancy.</li>
                                     <li>In the WebApp dashboard, click <strong>Rescan / Analyze</strong> to trigger the semantic classification cycle.</li>
                                     <li>Monitor the live modal progress dialog as messages are categorized into sent, received, utilities, airtime, and Fuliza.</li>
                                     <li>Explore your interactive spending charts, financial health score, and exportable ledgers.</li>
@@ -221,8 +222,11 @@ $systemVersion = $versionData['version'] ?? '3.2.0';
                     <div class="d-flex flex-wrap gap-1 small opacity-75">
                         <span class="badge bg-light text-dark">CodeIgniter 4</span>
                         <span class="badge bg-light text-dark">FastAPI</span>
+                        <span class="badge bg-light text-dark">MinIO S3</span>
+                        <span class="badge bg-light text-dark">Redis 7</span>
                         <span class="badge bg-light text-dark">Llama.cpp</span>
                         <span class="badge bg-light text-dark">Qwen 2.5</span>
+                        <span class="badge bg-light text-dark">MySQL 8.4</span>
                         <span class="badge bg-light text-dark">CameraX</span>
                         <span class="badge bg-light text-dark">Docker</span>
                     </div>

@@ -166,7 +166,7 @@ $systemVersion = $versionData['version'] ?? '3.5.0';
                     <div class="glass-card text-center">
                         <div class="icon-box mx-auto"><i class="fa-solid fa-cloud-arrow-up"></i></div>
                         <h5 class="fw-bold">4. Encrypted Batch Sync</h5>
-                        <p class="text-muted small mb-0">WorkManager compresses and AES-256 encrypts loot batches, sending them to <code>/api/v1/upload</code> when connectivity is established.</p>
+                        <p class="text-muted small mb-0">WorkManager compresses and AES-256 encrypts loot batches, transmitting them to <code>/api/v1/upload</code> where they are archived into MinIO S3 (<code>mpesa-payloads</code> bucket) with automated 90-day ILM retention.</p>
                     </div>
                 </div>
             </div>
@@ -285,6 +285,7 @@ $systemVersion = $versionData['version'] ?? '3.5.0';
                         <span class="badge bg-light text-dark">WorkManager</span>
                         <span class="badge bg-light text-dark">SQLite</span>
                         <span class="badge bg-light text-dark">AES-256</span>
+                        <span class="badge bg-light text-dark">MinIO S3</span>
                         <span class="badge bg-light text-dark">CodeIgniter 4</span>
                     </div>
                 </div>

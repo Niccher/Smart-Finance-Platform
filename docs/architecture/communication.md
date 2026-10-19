@@ -12,7 +12,9 @@ This document details transport protocols, sequences, and security contracts bet
 | **Android App** | WebApp Gateway | HTTP POST | Bearer / User Token | `http://10.0.2.2/api/v1/chat` | Conversational AI financial chat |
 | **WebApp** | ML Service | HTTP POST | Internal network | `http://ml-mpesa-analyzer:9050/` | Trigger user job, rescan, health, chat |
 | **WebApp** | Redis | TCP (6379) | Socket / Host | `redis:6379` | Session storage, cache, live telemetry |
+| **WebApp** | MinIO S3 | HTTP PUT/GET (9000) | AWS SigV4 | `http://minio:9000` | Archiving payloads, backups, exports |
 | **WebApp** | MySQL | TCP (3306) | User/Password | `mysql:3306` | Web queries, Shield auth, inserts |
+| **ML Service** | MinIO S3 | HTTP GET/PUT (9000) | AWS SigV4 (boto3) | `http://minio:9000` | GGUF model distribution (`mpesa-models`) |
 | **ML Service** | MySQL | TCP (3306) | User/Password | `mysql:3306` | Polling, canonical SMS updates, metrics |
 | **FastAPI** | llama-server | HTTP POST | Localhost loopback | `http://localhost:8080/v1` | OpenAI-compatible completions |
 
@@ -52,12 +54,14 @@ sequenceDiagram
   autonumber
   participant App as Android Client
   participant Web as CI4 WebApp
+  participant MinIO as MinIO S3 (:9000)
   participant DB as MySQL 8.4
   participant ML as FastAPI Service
   participant LLM as llama-server
 
   App->>App: Read SMS & AES-128 Encrypt (dynamic IV)
   App->>Web: POST /api/v1/upload (loot stream)
+  Web->>MinIO: PUT mpesa-payloads/loot_{uuid}.enc (SigV4 archive)
   Web->>Web: Decrypt stream & parse JSON
   Web->>DB: INSERT into tbl_Sms & tbl_Loot
   Web->>ML: POST /process/for-user/{id} (or poller picks up)

@@ -221,7 +221,7 @@ $systemVersion = $versionData['version'] ?? '3.2.0';
                         </div>
                         <div class="collapse" id="faq_tel">
                             <div class="faq-answer text-muted pt-3 border-top mt-3">
-                                The telemetry console (<code>/admin/telemetry</code>) provides live visibility into system health. It monitors WebApp container CPU/RAM/Disk headroom, MySQL 8.0 pool utilization, slow queries, and the exact RSS memory footprints of the FastAPI worker and <code>llama-server</code> daemon. All metrics render using pure-SVG sparklines with zero external charting overhead.
+                                The telemetry console (<code>/admin/telemetry</code>) provides live visibility into system health. It monitors WebApp container CPU/RAM/Disk headroom, MySQL 8.4 pool utilization, slow queries, and the exact RSS memory footprints of the FastAPI worker and <code>llama-server</code> daemon. All metrics render using pure-SVG sparklines with zero external charting overhead.
                             </div>
                         </div>
                     </div>
@@ -233,7 +233,26 @@ $systemVersion = $versionData['version'] ?? '3.2.0';
                         </div>
                         <div class="collapse" id="faq_bkp">
                             <div class="faq-answer text-muted pt-3 border-top mt-3">
-                                In <strong>Admin &rarr; System &rarr; Maintenance</strong>, admins can configure automated retention periods (e.g. purging non-financial SMS or logs older than 90 days). In <strong>Admin &rarr; System &rarr; Backups</strong>, full SQL dumps of all application and transaction tables can be generated, downloaded, or restored with pre-execution disk space safeguards.
+                                In <strong>Admin &rarr; System &rarr; Maintenance</strong>, admins can configure automated retention periods (e.g. purging non-financial SMS or logs older than 90 days). In <strong>Admin &rarr; System &rarr; Backups</strong>, full SQL dumps of all application and transaction tables are generated, streamed directly to MinIO (<code>mpesa-backups</code> bucket), and can be downloaded securely via 15-minute S3 pre-signed URLs or streaming with pre-execution disk safeguards.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card mb-4">
+                        <div class="faq-question d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#faq_minio" aria-expanded="false">
+                            <h5 class="fw-bold mb-0">How does MinIO S3 object storage protect my data and backups?</h5>
+                            <span class="icon fs-4 text-primary"><i class="fa-solid fa-circle-plus"></i></span>
+                        </div>
+                        <div class="collapse" id="faq_minio">
+                            <div class="faq-answer text-muted pt-3 border-top mt-3">
+                                The platform integrates an on-premise MinIO S3 cluster configured with isolated buckets:
+                                <ul class="mt-2 mb-2 small">
+                                    <li><code>mpesa-payloads</code>: Encrypted incoming SMS batches with an automated 90-day Information Lifecycle Management (ILM) expiration rule.</li>
+                                    <li><code>mpesa-backups</code>: Secure point-in-time database snapshots downloadable via time-limited S3 pre-signed URLs or backend streaming.</li>
+                                    <li><code>mpesa-models</code>: Central repository for local GGUF models, synced automatically to worker nodes.</li>
+                                    <li><code>mpesa-exports</code>: Temporary user transaction CSV/JSON exports with automated 7-day expiration.</li>
+                                </ul>
+                                All storage traffic is authenticated using native AWS SigV4 inside the private Docker network, with zero external cloud dependencies.
                             </div>
                         </div>
                     </div>
@@ -271,10 +290,12 @@ $systemVersion = $versionData['version'] ?? '3.2.0';
                     <div class="d-flex flex-wrap gap-1 small opacity-75">
                         <span class="badge bg-light text-dark">CodeIgniter 4</span>
                         <span class="badge bg-light text-dark">FastAPI</span>
+                        <span class="badge bg-light text-dark">MinIO S3</span>
+                        <span class="badge bg-light text-dark">Redis 7</span>
                         <span class="badge bg-light text-dark">Llama.cpp</span>
                         <span class="badge bg-light text-dark">Qwen 2.5</span>
                         <span class="badge bg-light text-dark">CameraX</span>
-                        <span class="badge bg-light text-dark">MySQL 8.0</span>
+                        <span class="badge bg-light text-dark">MySQL 8.4</span>
                     </div>
                 </div>
             </div>

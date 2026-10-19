@@ -109,6 +109,7 @@ $systemVersion = $versionData['version'] ?? '3.5.0';
                     </p>
                     <div class="d-flex gap-2 flex-wrap mb-4">
                         <span class="badge bg-light text-dark border px-3 py-2"><i class="fa-brands fa-python me-1"></i>FastAPI 0.110+</span>
+                        <span class="badge bg-light text-dark border px-3 py-2"><i class="fa-solid fa-server me-1"></i>MinIO S3 Models</span>
                         <span class="badge bg-light text-dark border px-3 py-2"><i class="fa-solid fa-wand-magic-sparkles me-1"></i>Conversational AI</span>
                         <span class="badge bg-light text-dark border px-3 py-2"><i class="fa-solid fa-brain me-1"></i>Llama.cpp / DeepSeek</span>
                         <span class="badge bg-light text-dark border px-3 py-2"><i class="fa-solid fa-gauge-high me-1"></i>Live Telemetry</span>
@@ -241,12 +242,12 @@ $systemVersion = $versionData['version'] ?? '3.5.0';
                 </div>
                 <div class="col-md-6">
                     <div class="glass-card">
-                        <h5 class="fw-bold mb-3"><i class="fa-solid fa-cubes text-primary me-2"></i>Hugging Face Model Presets</h5>
-                        <p class="text-muted small mb-2">Manage models effortlessly directly through the WebApp dashboard:</p>
+                        <h5 class="fw-bold mb-3"><i class="fa-solid fa-server text-primary me-2"></i>MinIO S3 Model Repository & Presets</h5>
+                        <p class="text-muted small mb-2">Centralized GGUF model storage (<code>mpesa-models</code>) with automated local caching:</p>
                         <ul class="text-muted small mb-0">
-                            <li class="mb-1"><strong>One-Click Presets:</strong> Pre-configured downloads for Qwen 2.5 1.5B/3B, Llama 3.2, and Mistral.</li>
-                            <li class="mb-1"><strong>Hardware Safeguards:</strong> Verifies disk space and RAM headroom before starting downloads.</li>
-                            <li class="mb-1"><strong>Hot-Switching:</strong> Switch active GGUF models on the fly with graceful daemon restarts.</li>
+                            <li class="mb-1"><strong>Central S3 Bucket:</strong> Stores tested GGUF weights without bloating Docker container layers.</li>
+                            <li class="mb-1"><strong>Automated Local Sync:</strong> On container boot or model activation, pulls missing weights to <code>/models/</code> with non-blocking threads.</li>
+                            <li class="mb-1"><strong>Hot-Switching & Presets:</strong> Switch active GGUF models on the fly (Qwen 2.5 1.5B/3B, Llama 3.2, DeepSeek) with graceful daemon restarts.</li>
                         </ul>
                     </div>
                 </div>
@@ -303,10 +304,12 @@ $systemVersion = $versionData['version'] ?? '3.5.0';
                     <h6 class="text-white fw-bold mb-3">Tech Stack</h6>
                     <div class="d-flex flex-wrap gap-1 small opacity-75">
                         <span class="badge bg-light text-dark">FastAPI</span>
+                        <span class="badge bg-light text-dark">MinIO S3</span>
+                        <span class="badge bg-light text-dark">Redis 7</span>
                         <span class="badge bg-light text-dark">Llama.cpp</span>
                         <span class="badge bg-light text-dark">Qwen 2.5</span>
                         <span class="badge bg-light text-dark">AVX2 / CUDA</span>
-                        <span class="badge bg-light text-dark">MySQL 8.0</span>
+                        <span class="badge bg-light text-dark">MySQL 8.4</span>
                         <span class="badge bg-light text-dark">CodeIgniter 4</span>
                     </div>
                 </div>
