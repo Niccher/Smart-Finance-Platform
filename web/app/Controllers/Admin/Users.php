@@ -223,6 +223,9 @@ class Users extends BaseController
             if ($db->tableExists('tbl_Loot')) {
                 $loots = $db->query("SELECT loot_Name FROM tbl_Loot WHERE SHA2(loot_Owner, 256) IN ($sub)")->getResult();
                 foreach ($loots as $loot) {
+                    try {
+                        service('storage')->deletePayload($loot->loot_Name);
+                    } catch (\Throwable $e) {}
                     $filePathTxt = WRITEPATH . 'uploads/payloads/' . ltrim($loot->loot_Name, '/');
                     $filePathJson = str_replace('.txt', '.json', $filePathTxt);
                     if (file_exists($filePathTxt)) unlink($filePathTxt);

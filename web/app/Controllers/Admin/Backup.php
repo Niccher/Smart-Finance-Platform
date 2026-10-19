@@ -454,46 +454,11 @@ class Backup extends BaseController
 
     private function getBackupHistory(): array
     {
-        $dir = WRITEPATH . 'backups';
-        if (!is_dir($dir)) return [];
-
-        $allFiles = scandir($dir);
-        if ($allFiles === false) return [];
-
-        $history = [];
-        foreach ($allFiles as $file) {
-            if ($file === '.' || $file === '..' || $file === '.gitkeep') {
-                continue;
-            }
-
-            $filepath = $dir . DIRECTORY_SEPARATOR . $file;
-            if (!is_file($filepath)) {
-                continue;
-            }
-
-            // Match any database backup file (.sql, .sql.gz, or legacy .gz)
-            if (!preg_match('/\.(sql|sql\.gz|gz)$/i', $file)) {
-                continue;
-            }
-
-            $history[] = [
-                'name'       => $file,
-                'size'       => filesize($filepath),
-                'human_size' => $this->humanSize(filesize($filepath)),
-                'modified'   => date('Y-m-d H:i:s', filemtime($filepath)),
-            ];
-        }
-
-        usort($history, fn($a, $b) => strcmp($b['modified'], $a['modified']));
-        return $history;
+        return service('storage')->listBackups();
     }
 
     private function humanSize(int $bytes): string
     {
-        $units = ['B', 'KB', 'MB', 'GB'];
-        for ($i = 0; $bytes >= 1024 && $i < count($units) - 1; $i++) {
-            $bytes /= 1024;
-        }
-        return round($bytes, 2) . ' ' . $units[$i];
+        return service('storage')->humanSize($bytes);
     }
 }

@@ -382,7 +382,7 @@ async def lifespan(app: FastAPI):
     if active_model_path and not os.path.isfile(active_model_path):
         from app.services.storage import ensure_model_cached
         try:
-            ensure_model_cached(os.path.basename(active_model_path))
+            await asyncio.to_thread(ensure_model_cached, os.path.basename(active_model_path))
         except Exception as ex:
             logger.warning(f"Could not cache active model from MinIO at startup: {ex}")
 

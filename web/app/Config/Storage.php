@@ -32,6 +32,12 @@ class Storage extends BaseConfig
     public string $region = 'us-east-1';
 
     /**
+     * S3 / MinIO Public Endpoint reachable by browsers (e.g. http://localhost:9000).
+     * If empty, falls back to $endpoint.
+     */
+    public string $publicEndpoint = '';
+
+    /**
      * Bucket Names
      */
     public string $bucketPayloads = 'mpesa-payloads';
@@ -45,6 +51,7 @@ class Storage extends BaseConfig
 
         $this->driver         = (string) env('STORAGE_DRIVER', $this->driver);
         $this->endpoint       = rtrim((string) env('MINIO_ENDPOINT', $this->endpoint), '/');
+        $this->publicEndpoint = rtrim((string) env('MINIO_PUBLIC_ENDPOINT', $this->publicEndpoint), '/');
         $this->accessKey      = (string) env('MINIO_ROOT_USER', $this->accessKey);
         $this->secretKey      = (string) env('MINIO_ROOT_PASSWORD', $this->secretKey);
         $this->region         = (string) env('MINIO_REGION', $this->region);

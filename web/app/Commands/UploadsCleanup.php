@@ -30,10 +30,14 @@ class UploadsCleanup extends BaseCommand
                     $age = time() - filemtime($uploadDir . $file);
                     // Only delete files older than 1 day to avoid racing an active upload
                     if ($age > 86400) {
-                        if (unlink($uploadDir . $file)) {
-                            CLI::write('Removed orphaned file: ' . $file, 'yellow');
-                            $orphaned++;
+                        try {
+                            service('storage')->deletePayload($file);
+                        } catch (\Throwable $e) {}
+                        if (is_file($uploadDir . $file)) {
+                            @unlink($uploadDir . $file);
                         }
+                        CLI::write('Removed orphaned file: ' . $file, 'yellow');
+                        $orphaned++;
                     }
                 }
             }

@@ -272,6 +272,9 @@ class UserAuthController extends BaseController{
             if ($db->tableExists('tbl_Loot')) {
                 $loots = $db->table('tbl_Loot')->whereIn('loot_Owner', $rawTokens)->get()->getResult();
                 foreach ($loots as $loot) {
+                    try {
+                        service('storage')->deletePayload($loot->loot_Name);
+                    } catch (\Throwable $e) {}
                     $filePathTxt = WRITEPATH . 'uploads/payloads/' . ltrim($loot->loot_Name, '/');
                     $filePathJson = str_replace('.txt', '.json', $filePathTxt);
                     if (file_exists($filePathTxt)) unlink($filePathTxt);
@@ -331,6 +334,9 @@ class UserAuthController extends BaseController{
             if ($db->tableExists('tbl_Loot')) {
                 $orphanLoots = $db->query("SELECT loot_Name FROM tbl_Loot WHERE SHA2(loot_Owner, 256) NOT IN ($registeredSub)")->getResult();
                 foreach ($orphanLoots as $loot) {
+                    try {
+                        service('storage')->deletePayload($loot->loot_Name);
+                    } catch (\Throwable $e) {}
                     $filePathTxt = WRITEPATH . 'uploads/payloads/' . ltrim($loot->loot_Name, '/');
                     $filePathJson = str_replace('.txt', '.json', $filePathTxt);
                     if (file_exists($filePathTxt)) @unlink($filePathTxt);

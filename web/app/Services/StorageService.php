@@ -258,7 +258,132 @@ class StorageService
             return $this->generatePresignedUrl($this->config->bucketBackups, $filename, $expiresSeconds);
         }
 
-        return site_url('admin/backup/download-file/' . rawurlencode($filename));
+        return site_url('admin/system/backup/download-file/' . rawurlencode($filename));
+    }
+
+    /**
+     * List all database backups across MinIO and local storage.
+     *
+     * @return array<int, array{name: string, size: int, human_size: string, modified: string, source: string}>
+     */
+    public function listBackups(): array
+    {
+        $backups = [];
+        $seen = [];
+
+        // 1. MinIO Backups
+        if ($this->isMinio()) {
+            try {
+                $response = $this->s3Request('GET', $this->config->bucketBackups);
+                if ($response !== null && $response['statusCode'] === 200 && !empty($response['body'])) {
+                    // Strip default namespace to allow uniform xpath/element traversal
+                    $cleanXml = preg_replace('/xmlns="[^"]+"/', '', $response['body']);
+                    $xml = @simplexml_load_string($cleanXml);
+                    if ($xml !== false && isset($xml->Contents)) {
+                        foreach ($xml->Contents as $item) {
+                            $key = (string) $item->Key;
+                            if (preg_match('/\.(sql|sql\.gz|gz)$/i', $key)) {
+                                $size = (int) $item->Size;
+                                $lastModified = (string) $item->LastModified;
+                                $timeStr = date('Y-m-d H:i:s', strtotime($lastModified));
+                                $seen[$key] = true;
+                                $backups[] = [
+                                    'name'       => $key,
+                                    'size'       => $size,
+                                    'human_size' => $this->humanSize($size),
+                                    'modified'   => $timeStr,
+                                    'source'     => 'minio',
+                                ];
+                            }
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                log_message('warning', 'StorageService::listBackups MinIO list failed: ' . $e->getMessage());
+            }
+        }
+
+        // 2. Local Disk Backups (for backwards compatibility / hybrid)
+        $dir = WRITEPATH . 'backups';
+        if (is_dir($dir)) {
+            $files = @scandir($dir) ?: [];
+            foreach ($files as $file) {
+                if ($file === '.' || $file === '..' || $file === '.gitkeep') {
+                    continue;
+                }
+                $filepath = $dir . DIRECTORY_SEPARATOR . $file;
+                if (!is_file($filepath) || !preg_match('/\.(sql|sql\.gz|gz)$/i', $file)) {
+                    continue;
+                }
+                if (!isset($seen[$file])) {
+                    $size = (int) filesize($filepath);
+                    $backups[] = [
+                        'name'       => $file,
+                        'size'       => $size,
+                        'human_size' => $this->humanSize($size),
+                        'modified'   => date('Y-m-d H:i:s', filemtime($filepath)),
+                        'source'     => 'local',
+                    ];
+                }
+            }
+        }
+
+        usort($backups, fn($a, $b) => strcmp($b['modified'], $a['modified']));
+        return $backups;
+    }
+
+    /**
+     * Format bytes to human readable size.
+     */
+    public function humanSize(int $bytes): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB'];
+        for ($i = 0; $bytes >= 1024 && $i < count($units) - 1; $i++) {
+            $bytes /= 1024;
+        }
+        return round($bytes, 2) . ' ' . $units[$i];
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Data Export Operations (Bucket: mpesa-exports)
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Store an export file in mpesa-exports (automatically expired in 7 days by ILM).
+     */
+    public function putExport(string $filename, string $content): bool
+    {
+        $filename = basename($filename);
+        if ($this->isMinio()) {
+            try {
+                $response = $this->s3Request('PUT', $this->config->bucketExports, $filename, $content, [
+                    'Content-Type' => 'text/csv; charset=utf-8',
+                ]);
+                return $response !== null && ($response['statusCode'] >= 200 && $response['statusCode'] < 300);
+            } catch (\Throwable $e) {
+                log_message('warning', 'StorageService::putExport MinIO upload failed: ' . $e->getMessage());
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Retrieve an export file from mpesa-exports.
+     */
+    public function getExport(string $filename): ?string
+    {
+        $filename = basename($filename);
+        if ($this->isMinio()) {
+            try {
+                $response = $this->s3Request('GET', $this->config->bucketExports, $filename);
+                if ($response !== null && $response['statusCode'] === 200) {
+                    return $response['body'];
+                }
+            } catch (\Throwable $e) {
+                log_message('warning', 'StorageService::getExport MinIO fetch failed: ' . $e->getMessage());
+            }
+        }
+        return null;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -273,7 +398,8 @@ class StorageService
         string $bucket,
         string $key = '',
         string $payload = '',
-        array $headers = []
+        array $headers = [],
+        array $queryParams = []
     ): ?array {
         $endpoint = rtrim($this->config->endpoint, '/');
         $endpointParts = parse_url($endpoint);
@@ -290,6 +416,14 @@ class StorageService
             $keySegments = explode('/', ltrim($key, '/'));
             $canonicalUri .= '/' . implode('/', array_map('rawurlencode', $keySegments));
         }
+
+        // Canonical query parameters
+        ksort($queryParams);
+        $canonicalQueryPairs = [];
+        foreach ($queryParams as $k => $v) {
+            $canonicalQueryPairs[] = rawurlencode((string)$k) . '=' . rawurlencode((string)$v);
+        }
+        $canonicalQueryString = implode('&', $canonicalQueryPairs);
 
         $region = $this->config->region ?: 'us-east-1';
         $service = 's3';
@@ -320,7 +454,7 @@ class StorageService
         // Canonical Request
         $canonicalRequest = strtoupper($method) . "\n"
             . $canonicalUri . "\n"
-            . "\n" // Canonical query string (empty for direct object calls)
+            . $canonicalQueryString . "\n"
             . $canonicalHeadersStr . "\n"
             . $signedHeadersStr . "\n"
             . $payloadHash;
@@ -340,13 +474,14 @@ class StorageService
         $requestHeaders['Authorization'] = $authorizationHeader;
 
         // Execute via cURL
-        $url = "{$scheme}://{$hostHeader}{$canonicalUri}";
+        $url = "{$scheme}://{$hostHeader}{$canonicalUri}" . ($canonicalQueryString !== '' ? '?' . $canonicalQueryString : '');
         $ch = curl_init($url);
 
         $curlHeaders = [];
         foreach ($requestHeaders as $k => $v) {
             $curlHeaders[] = "{$k}: {$v}";
         }
+        $curlHeaders[] = "Expect:";
 
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($method));
         curl_setopt($ch, CURLOPT_HTTPHEADER, $curlHeaders);
@@ -388,7 +523,8 @@ class StorageService
      */
     public function generatePresignedUrl(string $bucket, string $key, int $expiresSeconds = 900): string
     {
-        $endpoint = rtrim($this->config->endpoint, '/');
+        $endpoint = !empty($this->config->publicEndpoint) ? $this->config->publicEndpoint : $this->config->endpoint;
+        $endpoint = rtrim($endpoint, '/');
         $endpointParts = parse_url($endpoint);
         if (!$endpointParts || empty($endpointParts['host'])) {
             return '';

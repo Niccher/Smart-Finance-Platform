@@ -169,6 +169,9 @@
                                     <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i>Active</span>
                                 <?php else: ?>
                                     <span class="badge bg-secondary">Inactive</span>
+                                    <?php if (isset($m['cached']) && !$m['cached']): ?>
+                                        <span class="badge bg-info-subtle text-info border ms-1" title="Stored in MinIO object storage; will be downloaded automatically when activated"><i class="fa-solid fa-cloud me-1"></i>MinIO</span>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             </td>
                             <td class="text-nowrap">

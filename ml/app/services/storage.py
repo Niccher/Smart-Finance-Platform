@@ -28,7 +28,13 @@ def get_s3_client():
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
             region_name=region,
-            config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
+            config=Config(
+                signature_version="s3v4",
+                s3={"addressing_style": "path"},
+                connect_timeout=3,
+                read_timeout=15,
+                retries={"max_attempts": 2},
+            ),
         )
         return _s3_client
     except Exception as e:
@@ -76,14 +82,15 @@ def ensure_model_cached(filename: str) -> Optional[str]:
         os.makedirs(model_dir, exist_ok=True)
         client.download_file(Bucket=bucket, Key=filename, Filename=temp_path)
 
-        # Basic GGUF header check
-        with open(temp_path, "rb") as vf:
-            magic = vf.read(4)
-        if magic != b"GGUF":
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-            logger.error(f"MinIO model '{filename}' has invalid GGUF header ({magic!r})")
-            return None
+        # Basic GGUF header check (only if model file is .gguf)
+        if filename.lower().endswith(".gguf"):
+            with open(temp_path, "rb") as vf:
+                magic = vf.read(4)
+            if magic != b"GGUF":
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                logger.error(f"MinIO model '{filename}' has invalid GGUF header ({magic!r})")
+                return None
 
         os.replace(temp_path, dest_path)
         logger.info(f"Model '{filename}' successfully cached from MinIO ({round(os.path.getsize(dest_path)/(1024*1024), 1)} MB)")

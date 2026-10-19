@@ -101,9 +101,14 @@ class DataRetention extends BaseCommand
             $db->transComplete();
 
             // ── Delete the physical upload file ────────────────
-            if (!empty($name) && is_file($uploadDir . $name)) {
-                if (@unlink($uploadDir . $name)) {
-                    $stats['files']++;
+            if (!empty($name)) {
+                try {
+                    service('storage')->deletePayload($name);
+                } catch (\Throwable $e) {}
+                if (is_file($uploadDir . $name)) {
+                    if (@unlink($uploadDir . $name)) {
+                        $stats['files']++;
+                    }
                 }
             }
 
