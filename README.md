@@ -2,7 +2,7 @@
 
 [![Release](https://img.shields.io/badge/Release-v3.5.0-blue.svg)](https://github.com/Niccher/Smart-Finance-Platform/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![PHP](https://img.shields.io/badge/PHP-8.3-777BB4.svg)](https://www.php.net/)
+[![PHP](https://img.shields.io/badge/PHP-8.4-777BB4.svg)](https://www.php.net/)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB.svg)](https://www.python.org/)
 [![Redis](https://img.shields.io/badge/Redis-7.0-DC382D.svg)](https://redis.io/)
 [![MinIO](https://img.shields.io/badge/MinIO-S3_Storage-C72C48.svg)](https://min.io/)
@@ -10,7 +10,7 @@
 
 Full-stack financial intelligence platform and mobile API gateway for M-Pesa, Commercial Banking, and Digital Credit SMS transactions. Combines a CodeIgniter 4 web application, an autonomous Python FastAPI LLM intelligence microservice (Qwen 2.5, DeepSeek, Gemini), a high-performance Redis 7 session & cache engine, an on-premise MinIO S3 object store, and a shared MySQL 8.4 database to ingest, decrypt, classify, analyze, and chat with personal finances.
 
-Stack: PHP 8.3 (CodeIgniter 4), Python 3.12 (FastAPI, llama.cpp, Qwen2.5), MinIO (S3 Object Storage), Redis 7, MySQL 8.4, Docker Compose
+Stack: PHP 8.4 (CodeIgniter 4), Python 3.12 (FastAPI, llama.cpp, Qwen2.5), MinIO (S3 Object Storage), Redis 7, MySQL 8.4, Docker Compose
 
 **If you only need to run the system, this page is enough.**  
 Software engineers: [docs/README.md](docs/README.md).
@@ -43,7 +43,7 @@ Software engineers: [docs/README.md](docs/README.md).
 - Minimum 4 GB host RAM (8 GB recommended for local CPU LLM inference)
 
 ### Option B — Without Docker
-- Native PHP 8.3+ with `intl`, `mbstring`, `mysqli`, `curl` extensions & Composer 2.x
+- Native PHP 8.4+ with `intl`, `mbstring`, `mysqli`, `curl` extensions & Composer 2.x
 - Python 3.12+ with virtual environment & llama-server binary
 - Running MySQL 8.4 server instance
 - Full native instructions: [docs/engineering/local-development.md](docs/engineering/local-development.md)

@@ -1,6 +1,6 @@
 # Smart Finance Platform — Engineering Documentation
 
-Welcome to the central engineering documentation hub for the **Smart Finance Platform** monorepo. This repository consolidates the PHP 8.3 CodeIgniter 4 WebApp, the Python 3.12 FastAPI LLM intelligence microservice (Qwen 2.5, DeepSeek, Gemini), a high-performance Redis 7 session & cache engine, an on-premise MinIO S3 object store, and shared database operations into a unified workspace.
+Welcome to the central engineering documentation hub for the **Smart Finance Platform** monorepo. This repository consolidates the PHP 8.4 CodeIgniter 4 WebApp, the Python 3.12 FastAPI LLM intelligence microservice (Qwen 2.5, DeepSeek, Gemini), a high-performance Redis 7 session & cache engine, an on-premise MinIO S3 object store, and shared database operations into a unified workspace.
 
 If you only need to run the application using Docker, refer to the root [Operator Guide](../README.md).
 
@@ -21,7 +21,7 @@ If you only need to run the application using Docker, refer to the root [Operato
 | **FastAPI Microservice Handbook** | [services/fastapi.md](services/fastapi.md) | Routers, background loops, and Pydantic schemas |
 | **ML & Inference Handbook** | [services/ml.md](services/ml.md) | Local LLM, Qwen2.5 GGUF, prompts, and fallback engines |
 | **Android Client Contract** | [services/android.md](services/android.md) | Integration specs for `Smart-Finance-Android` |
-| **Local Development** | [engineering/local-development.md](engineering/local-development.md) | Native PHP 8.3 & Python 3.12 setup |
+| **Local Development** | [engineering/local-development.md](engineering/local-development.md) | Native PHP 8.4 & Python 3.12 setup |
 | **Making Changes Safely** | [engineering/making-changes.md](engineering/making-changes.md) | Development workflow & Definition of Done |
 | **Database & Migrations** | [engineering/database.md](engineering/database.md) | Migrations ownership and query patterns |
 | **Automated Testing Guide** | [engineering/testing.md](engineering/testing.md) | PHPUnit and Pytest test runners |

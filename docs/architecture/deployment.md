@@ -10,7 +10,7 @@ The system deploys via a unified root `docker-compose.yml` comprising four dedic
 
 | Service Name | Container Name | Base Image / Runtime | Exposed Ports | Role & Volume Mounts |
 |---|---|---|---|---|
-| `web` | `mpesa-web` | PHP 8.3 Apache Debian | `80:80` | WebApp UI, REST gateway, cron daemon. Mounts `web/writable/` for logs and encrypted payloads. |
+| `web` | `mpesa-web` | PHP 8.4 Apache Debian | `80:80` | WebApp UI, REST gateway, cron daemon. Mounts `web/writable/` for logs and encrypted payloads. |
 | `ml` | `ml-mpesa-analyzer` | Python 3.12 slim | `8001:9050` | FastAPI microservice & co-located `llama-server`. Mounts `./ml/models/` for GGUF weights. |
 | `redis` | `mpesa-redis` | Redis 7.2 Alpine | `6379:6379` | In-memory session store & query accelerator. Configured with 128 MB `volatile-lru` eviction. |
 | `mysql` | `mpesa-db` | MySQL 8.4 LTS | `3306:3306` | Relational database. Mounts persistent named volume `mpesa_db_data:/var/lib/mysql`. |

@@ -1,5 +1,5 @@
 site_name: Smart Finance Platform Documentation
-site_description: Unified engineering documentation for the Smart Finance Platform Monorepo (PHP 8.3 CodeIgniter 4 WebApp, Python 3.12 FastAPI LLM Microservice, Redis 7 In-Memory Cache, MySQL 8.4 Database, and Android Companion Client Ecosystem).
+site_description: Unified engineering documentation for the Smart Finance Platform Monorepo (PHP 8.4 CodeIgniter 4 WebApp, Python 3.12 FastAPI LLM Microservice, Redis 7 In-Memory Cache, MySQL 8.4 Database, and Android Companion Client Ecosystem).
 site_author: Smart Finance Engineering Team
 repo_url: https://github.com/Niccher/Smart-Finance-Platform
 repo_name: Niccher/Smart-Finance-Platform

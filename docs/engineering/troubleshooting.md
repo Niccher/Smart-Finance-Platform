@@ -34,7 +34,7 @@ chmod -R 775 writable/
 **Symptom**: `Call to undefined function intl_is_failure()` or `mb_strlen()`.
 
 **Remedy**:
-Install missing PHP 8.3 modules:
+Install missing PHP 8.4 modules:
 ```bash
-sudo apt-get install -y php8.3-intl php8.3-mbstring php8.3-xml php8.3-curl php8.3-mysql
+sudo apt-get install -y php8.4-intl php8.4-mbstring php8.4-xml php8.4-curl php8.4-mysql
 ```

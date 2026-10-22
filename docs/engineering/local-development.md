@@ -6,7 +6,7 @@ Instructions for developing directly on your host development machine without ru
 
 ## 1. Prerequisites
 
-- **PHP 8.3+** with extensions: `intl`, `mbstring`, `mysqli`, `curl`, `xml`, `zip`
+- **PHP 8.4+** with extensions: `intl`, `mbstring`, `mysqli`, `curl`, `xml`, `zip`
 - **Composer 2.x**
 - **Python 3.12+** with `venv` and `pip`
 - Running **MySQL 8.4** instance (or start only the database: `docker compose up -d mysql`)

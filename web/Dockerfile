@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM php:8.3-apache
+FROM php:8.4.27-apache
 
 # ── System dependencies ────────────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
