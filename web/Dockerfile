@@ -1,5 +1,25 @@
 # syntax=docker/dockerfile:1
-FROM php:8.4.27-apache
+FROM php:8.3-apache
+
+# ── PHP & Apache Security Hardening (Mitigates CVE-2024-4577, CVE-2024-8926, CVE-2024-8927, CVE-2024-8928) ──
+RUN { \
+        echo 'expose_php = Off'; \
+        echo 'display_errors = Off'; \
+        echo 'display_startup_errors = Off'; \
+        echo 'log_errors = On'; \
+        echo 'error_log = /var/log/php_errors.log'; \
+        echo 'allow_url_include = Off'; \
+        echo 'session.cookie_httponly = 1'; \
+        echo 'session.use_strict_mode = 1'; \
+        echo 'session.cookie_samesite = "Lax"'; \
+    } > /usr/local/etc/php/conf.d/security-hardening.ini \
+    && { \
+        echo 'ServerTokens Prod'; \
+        echo 'ServerSignature Off'; \
+        echo 'Header always set X-Content-Type-Options "nosniff"'; \
+        echo 'Header always set X-Frame-Options "SAMEORIGIN"'; \
+    } > /etc/apache2/conf-available/security-headers.conf \
+    && a2enconf security-headers
 
 # ── System dependencies ────────────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \

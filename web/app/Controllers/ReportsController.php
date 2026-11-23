@@ -33,8 +33,8 @@ class ReportsController extends BaseController
         $rawTokens = array_values(array_filter(array_map(fn($r) => $r->tk ?? '', $tokenRows)));
 
         $report = $mod->getReportData($year, $month, $rawTokens);
-        $trends = $modInsights->getSpendingTrends();
-        $recurring = $modInsights->getRecurringPayments();
+        $trends = $modInsights->getSpendingTrends(null, (int)$userId);
+        $recurring = $modInsights->getRecurringPayments(null, (int)$userId);
 
         // Build available months for selector
         $months = [];

@@ -20,28 +20,42 @@ class BudgetModel extends Model
         return $this->findAll();
     }
 
-    public function saveBudget(array $data): bool
+    public function saveBudget(array $data, int $userId = 0): bool
     {
+        if ($userId > 0) {
+            $data['user_id'] = $userId;
+        }
         $data['created_at'] = date('Y-m-d H:i:s');
         if (!empty($data['id'])) {
-            return $this->update($data['id'], $data);
+            $builder = $this;
+            if ($userId > 0) {
+                $builder = $builder->where('user_id', $userId);
+            }
+            return $builder->update($data['id'], $data);
         }
         return $this->insert($data) !== false;
     }
 
-    public function deleteBudget(int $id): bool
+    public function deleteBudget(int $id, int $userId = 0): bool
     {
-        return $this->delete($id);
+        $builder = $this->where('id', $id);
+        if ($userId > 0) {
+            $builder->where('user_id', $userId);
+        }
+        return (bool)$builder->delete();
     }
 
-    public function getBudgetProgress(array $budgets): array
+    public function getBudgetProgress(array $budgets, int $userId = 0): array
     {
         $results = [];
         $now     = time();
-        $allSms  = $this->db->table('tbl_Sms s')
+        $builder = $this->db->table('tbl_Sms s')
             ->select('s.*, sc.direction as cl_direction')
-            ->join('tbl_Sms_Classification sc', 'sc.sms_id = s.id', 'left')
-            ->get()->getResult();
+            ->join('tbl_Sms_Classification sc', 'sc.sms_id = s.id', 'left');
+        if ($userId > 0) {
+            $builder->where('s.sms_user_id', $userId);
+        }
+        $allSms = $builder->get()->getResult();
 
         foreach ($budgets as $budget) {
             if ($budget['period'] === 'weekly') {

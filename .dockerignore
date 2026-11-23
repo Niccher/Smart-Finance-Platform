@@ -20,6 +20,13 @@ tests
 README.md
 LICENSE
 CONTRIBUTING.md
+*.log
+*.tmp
+*.temp
+*.bak
+*.pph
+__pycache__
+*.py[cod]
 !writable/logs/index.html
 !writable/cache/index.html
 !writable/session/index.html

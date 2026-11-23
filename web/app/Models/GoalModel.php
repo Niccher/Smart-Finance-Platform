@@ -37,6 +37,7 @@ class GoalModel extends Model
             $rows = $db->table('tbl_Sms s')
                 ->select('s.sms_time, s.sms_body, sc.direction')
                 ->join('tbl_Sms_Classification sc', 'sc.sms_id = s.id', 'left')
+                ->where('s.sms_user_id', $userId)
                 ->where('sc.category', $goal['category'])
                 ->get()->getResult();
 

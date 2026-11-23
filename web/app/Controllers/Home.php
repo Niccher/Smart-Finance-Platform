@@ -133,7 +133,20 @@ class Home extends BaseController
 
     public function progress()
     {
-        $userId = auth()->user()->id;
+        $user = auth()->user();
+        if (!$user) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized'])->setStatusCode(401);
+        }
+        $data = self::getProgressData((int)$user->id);
+        return $this->response->setJSON($data);
+    }
+
+    /**
+     * Compute progress statistics for a user ID.
+     * Can be invoked directly by web and API controllers without uninitialized controller instantiation.
+     */
+    public static function getProgressData(int $userId): array
+    {
         $db = \Config\Database::connect();
         $tokenType = \CodeIgniter\Shield\Authentication\Authenticators\AccessTokens::ID_TYPE_ACCESS_TOKEN;
 
@@ -287,23 +300,23 @@ class Home extends BaseController
             $uiStatus = 'idle';
         }
 
-        return $this->response->setJSON([
+        return [
             'status'            => $uiStatus,
             'total'             => $total,
-            'processed'       => $processed,
-            'llm_classified'  => $llmClassified,
-            'completed'       => (int)($statuses['done'] ?? $statuses['completed'] ?? 0),
-            'skipped'         => (int)($statuses['skipped'] ?? 0),
-            'errors'          => (int)($statuses['error'] ?? 0) + (int)($job['errors'] ?? 0),
-            'pending'         => (int)($statuses['pending'] ?? 0),
+            'processed'         => $processed,
+            'llm_classified'    => $llmClassified,
+            'completed'         => (int)($statuses['done'] ?? $statuses['completed'] ?? 0),
+            'skipped'           => (int)($statuses['skipped'] ?? 0),
+            'errors'            => (int)($statuses['error'] ?? 0) + (int)($job['errors'] ?? 0),
+            'pending'           => (int)($statuses['pending'] ?? 0),
             'total_senders'     => $uniqueSendersCount,
             'processed_senders' => $totalSenders,
             'finance_senders'   => $financeSenders,
             'bad_senders'       => $totalSenders - $financeSenders,
-            'finance_sms'     => $financeSms,
-            'running'         => $running,
-            'job'             => $job,
-        ]);
+            'finance_sms'       => $financeSms,
+            'running'           => $running,
+            'job'               => $job,
+        ];
     }
 
 

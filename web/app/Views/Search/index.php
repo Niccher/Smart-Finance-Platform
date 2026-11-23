@@ -77,14 +77,14 @@
             <div class="col-md-3">
                 <label class="form-label small fw-bold text-uppercase text-secondary">Date Range</label>
                 <input type="text" id="reportrange" class="form-control" placeholder="Select dates...">
-                <input type="hidden" name="date_from" id="date_from" value="<?= $filters['date_from'] ?? '' ?>">
-                <input type="hidden" name="date_to" id="date_to" value="<?= $filters['date_to'] ?? '' ?>">
+                <input type="hidden" name="date_from" id="date_from" value="<?= esc($filters['date_from'] ?? '', 'attr') ?>">
+                <input type="hidden" name="date_to" id="date_to" value="<?= esc($filters['date_to'] ?? '', 'attr') ?>">
             </div>
             <div class="col-md-2">
                 <label class="form-label small fw-bold text-uppercase text-secondary">Amount Range (Ksh)</label>
                 <div class="input-group">
-                    <input type="number" name="min_amount" class="form-control" placeholder="Min" value="<?= $filters['min_amount'] ?? '' ?>">
-                    <input type="number" name="max_amount" class="form-control" placeholder="Max" value="<?= $filters['max_amount'] ?? '' ?>">
+                    <input type="number" name="min_amount" class="form-control" placeholder="Min" value="<?= esc($filters['min_amount'] ?? '', 'attr') ?>">
+                    <input type="number" name="max_amount" class="form-control" placeholder="Max" value="<?= esc($filters['max_amount'] ?? '', 'attr') ?>">
                 </div>
             </div>
             <div class="col-12 text-end mt-4">

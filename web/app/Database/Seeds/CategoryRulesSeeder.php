@@ -146,8 +146,12 @@ class CategoryRulesSeeder extends Seeder
             }
 
             $db->table('tbl_Category_Rules')->insert([
+                'user_id'          => null,
                 'keyword'          => $row['keyword'],
                 'correct_category' => $row['correct_category'],
+                'match_type'       => 'exact',
+                'rule_source'      => 'system',
+                'hit_count'        => 0,
                 'created_at'       => $now,
             ]);
             $inserted++;

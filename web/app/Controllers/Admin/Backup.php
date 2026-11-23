@@ -97,11 +97,11 @@ class Backup extends BaseController
     public function scheduled()
     {
         // Endpoint for cron job - saves to file
-        $key = $this->request->getGet('key');
-        $validKey = getenv('BACKUP_CRON_KEY') ?: 'changeme';
+        $key = (string) $this->request->getGet('key');
+        $validKey = (string) getenv('BACKUP_CRON_KEY');
 
-        if ($key !== $validKey) {
-            return $this->respond(['status' => 'error', 'message' => 'Invalid key'], 403);
+        if (empty($validKey) || !hash_equals($validKey, $key)) {
+            return $this->respond(['status' => 'error', 'message' => 'Unauthorized or cron backup key not configured.'], 403);
         }
 
         try {
@@ -228,13 +228,13 @@ class Backup extends BaseController
         $exclude = implode(' ', array_map(fn($t) => '--ignore-table=' . $config['name'] . '.' . $t, $excludeTables));
         $structureFlag = $structureOnly ? '--no-data' : '';
 
+        putenv('MYSQL_PWD=' . $config['pass']);
         $cmd = sprintf(
-            'mysqldump --single-transaction --quick --skip-lock-tables %s %s -h%s -u%s -p%s -P%d %s',
+            'mysqldump --single-transaction --quick --skip-lock-tables %s %s -h%s -u%s -P%d %s',
             $structureFlag,
             $exclude,
             escapeshellarg($config['host']),
             escapeshellarg($config['user']),
-            escapeshellarg($config['pass']),
             $config['port'],
             escapeshellarg($config['name'])
         );
@@ -242,6 +242,7 @@ class Backup extends BaseController
         $output = [];
         $returnVar = 0;
         exec($cmd, $output, $returnVar);
+        putenv('MYSQL_PWD'); // Unset immediately
 
         if ($returnVar !== 0) {
             // Fallback to PHP-based dump

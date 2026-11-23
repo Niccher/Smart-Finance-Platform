@@ -11,14 +11,14 @@ class NoteModel extends Model
     protected $allowedFields = ['user_id', 'sms_id', 'trans_id', 'note', 'created_at', 'updated_at'];
     protected $useTimestamps = true;
 
-    public function getForSms(int $smsId): ?array
+    public function getForSms(int $smsId, int $userId): ?array
     {
-        return $this->where('sms_id', $smsId)->first();
+        return $this->where('sms_id', $smsId)->where('user_id', $userId)->first();
     }
 
-    public function getForTrans(int $transId): ?array
+    public function getForTrans(int $transId, int $userId): ?array
     {
-        return $this->where('trans_id', $transId)->first();
+        return $this->where('trans_id', $transId)->where('user_id', $userId)->first();
     }
 
     public function saveNote(int $userId, int $smsId, string $note): bool

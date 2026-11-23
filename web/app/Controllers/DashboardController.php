@@ -46,11 +46,11 @@ class DashboardController extends BaseController
             'received_summary'    => $received_summary,
             'recent_transactions' => $recent_transactions,
             'top_counterparties'  => $mod_uploads->getTopCounterparties(5, $deviceToken),
-            'budget_alerts'       => $modBudget->getBudgetProgress($userBudgets),
+            'budget_alerts'       => $modBudget->getBudgetProgress($userBudgets, $userId),
             'budgets'             => $userBudgets,
-            'smart_alerts'        => $modInsights->getSmartAlerts($deviceToken),
-            'trends'              => $modInsights->getSpendingTrends($deviceToken),
-            'health_score'        => $modInsights->getFinancialHealthScore($deviceToken),
+            'smart_alerts'        => $modInsights->getSmartAlerts($deviceToken, $userId),
+            'trends'              => $modInsights->getSpendingTrends($deviceToken, $userId),
+            'health_score'        => $modInsights->getFinancialHealthScore($deviceToken, $userId),
             'bg_color'            => '#B1B8ED'
         ];
 

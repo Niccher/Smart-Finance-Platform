@@ -655,8 +655,9 @@ class Settings extends BaseController
 
     public function getNote(int $smsId)
     {
+        $userId = (int) auth()->id();
         $modNotes = new NoteModel();
-        $note = $modNotes->getForSms($smsId);
+        $note = $modNotes->getForSms($smsId, $userId);
         return $this->response->setJSON($note ?: ['note' => '']);
     }
 
@@ -698,9 +699,10 @@ class Settings extends BaseController
 
     public function deleteGoal()
     {
+        $userId = (int) auth()->user()->id;
         $id = (int)$this->request->getPost('id');
         if ($id > 0) {
-            (new GoalModel())->delete($id);
+            (new GoalModel())->where('id', $id)->where('user_id', $userId)->delete();
         }
         return redirect()->to('/dashboard/settings/goals')->with('message', 'Goal deleted.');
     }
@@ -748,9 +750,10 @@ class Settings extends BaseController
 
     public function deleteRecurring()
     {
+        $userId = (int) auth()->user()->id;
         $id = (int)$this->request->getPost('id');
         if ($id > 0) {
-            (new RecurringPaymentModel())->delete($id);
+            (new RecurringPaymentModel())->where('id', $id)->where('user_id', $userId)->delete();
         }
         return redirect()->to('/dashboard/settings/recurring')->with('message', 'Recurring transaction removed.');
     }

@@ -143,8 +143,8 @@ class UploadsController extends BaseApiController
         $user = $this->getUserFromToken();
         if (!$user) return $this->failUnauthorized('Invalid token');
 
-        $controller = new Home();
-        return $controller->progress();
+        $data = Home::getProgressData((int)$user->id);
+        return $this->respond($data);
     }
 
     public function uploadListing(): ResponseInterface
@@ -425,7 +425,10 @@ class UploadsController extends BaseApiController
     private function triggerMlProcessingWebhook(?int $userId): void
     {
         if (!$userId) return;
-        $mlBaseUrl = (string) env('ML_BACKEND_URL', 'http://127.0.0.1:8000');
+        $mlBaseUrl = (string) config('MlBackend')->baseUrl;
+        if (empty($mlBaseUrl)) {
+            $mlBaseUrl = (string) env('ML_BACKEND_URL', 'http://ml-mpesa-analyzer:9050');
+        }
         $mlSecret = (string) env('ML_INTERNAL_SECRET', '');
 
         try {

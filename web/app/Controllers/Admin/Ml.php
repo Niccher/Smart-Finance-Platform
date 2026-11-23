@@ -670,6 +670,16 @@ class Ml extends BaseController
             $url = 'http://' . $url;
         }
         $url = rtrim($url, '/');
+
+        $parsed = parse_url($url);
+        $host = strtolower($parsed['host'] ?? '');
+        if (empty($host) || $host === '169.254.169.254' || $host === 'metadata.google.internal' || preg_match('/^169\.254\./', $host)) {
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'Prohibited or invalid target host for ML microservice.',
+            ]);
+        }
+
         $start = microtime(true);
 
         try {

@@ -133,13 +133,6 @@ $routes->get('/ml-backend', 'Home::mlBackend');
 $routes->get('/setup', 'Home::setup');
 $routes->get('/faq', 'Home::faq');
 
-$routes->group('auth', function ($routes) {
-    $routes->add('login', 'AuthController::login');
-    $routes->add('register', 'AuthController::register');
-    $routes->add('search', 'AuthController::user_info');
-    $routes->add('logout', 'AuthController::user_logout');
-});
-
 $routes->group('api/v1', ['namespace' => 'App\Controllers\Api\V1'], function ($routes) {
     // Ecosystem Release Info
     $routes->get('system/version', '\App\Controllers\Home::systemVersion');

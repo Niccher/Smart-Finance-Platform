@@ -11,12 +11,12 @@ class Migrate extends BaseController
 
     public function index()
     {
-        // Simple auth check - only allow from localhost or with secret key
-        $key = $this->request->getGet('key');
-        $validKey = getenv('MIGRATE_KEY') ?: 'run-migrations';
+        // Simple auth check - only allow with valid secret key
+        $key = (string) $this->request->getGet('key');
+        $validKey = (string) getenv('MIGRATE_KEY');
 
-        if ($key !== $validKey) {
-            return $this->respond(['status' => 'error', 'message' => 'Invalid key'], 403);
+        if (empty($validKey) || !hash_equals($validKey, $key)) {
+            return $this->respond(['status' => 'error', 'message' => 'Unauthorized or migration key not configured.'], 403);
         }
 
         try {
@@ -38,21 +38,21 @@ class Migrate extends BaseController
                 'migrated' => $result,
             ]);
         } catch (\Throwable $e) {
+            log_message('error', 'Admin Migrate error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
             return $this->respond([
                 'status' => 'error',
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'message' => 'Migration failed: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     public function status()
     {
-        $key = $this->request->getGet('key');
-        $validKey = getenv('MIGRATE_KEY') ?: 'run-migrations';
+        $key = (string) $this->request->getGet('key');
+        $validKey = (string) getenv('MIGRATE_KEY');
 
-        if ($key !== $validKey) {
-            return $this->respond(['status' => 'error', 'message' => 'Invalid key'], 403);
+        if (empty($validKey) || !hash_equals($validKey, $key)) {
+            return $this->respond(['status' => 'error', 'message' => 'Unauthorized or migration key not configured.'], 403);
         }
 
         try {

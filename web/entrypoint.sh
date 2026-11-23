@@ -102,8 +102,7 @@ if [ ! -f "/etc/cron.d/mpesa-analyzer" ]; then
 fi
 
 # Start the cron daemon so scheduled jobs run inside the container
-echo "Starting cron daemon..."
-cron -L 15
+cron -L 15 || service cron status || true
 
 echo "Fixing Apache MPM conflicts..."
 a2dismod mpm_event mpm_worker || true

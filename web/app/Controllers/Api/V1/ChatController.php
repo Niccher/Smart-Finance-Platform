@@ -138,14 +138,11 @@ class ChatController extends BaseApiController
      */
     public function history()
     {
-        $userId = trim((string)($this->request->getGet('user_id') ?? $this->request->getHeaderLine('X-User-Id')));
-        if (empty($userId)) {
-            $user = $this->getUserFromToken();
-            $userId = $user ? (string)$user->id : '';
+        $user = $this->getUserFromToken();
+        if (!$user) {
+            return $this->response->setStatusCode(401)->setJSON(['error' => 'Unauthorized']);
         }
-        if (empty($userId)) {
-            return $this->response->setStatusCode(400)->setJSON(['error' => 'user_id is required']);
-        }
+        $userId = (string) $user->id;
 
         $db = \Config\Database::connect();
         $messages = [];
@@ -170,14 +167,11 @@ class ChatController extends BaseApiController
      */
     public function clearHistory()
     {
-        $userId = trim((string)($this->request->getGet('user_id') ?? $this->request->getHeaderLine('X-User-Id')));
-        if (empty($userId)) {
-            $user = $this->getUserFromToken();
-            $userId = $user ? (string)$user->id : '';
+        $user = $this->getUserFromToken();
+        if (!$user) {
+            return $this->response->setStatusCode(401)->setJSON(['error' => 'Unauthorized']);
         }
-        if (empty($userId)) {
-            return $this->response->setStatusCode(400)->setJSON(['error' => 'user_id is required']);
-        }
+        $userId = (string) $user->id;
 
         $db = \Config\Database::connect();
         try {

@@ -75,6 +75,8 @@ logs/
 php_errors.log
 *.tmp
 *.temp
+*.bak
+*.pph
 
 # ── Operating System Junk ────────────────────────────────────
 .DS_Store

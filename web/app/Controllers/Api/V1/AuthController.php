@@ -40,8 +40,14 @@ class AuthController extends BaseApiController
         $modUploads->linkDevice((int)$userinfo->id, $user_auth_token, 'Android App Device');
 
         return $this->respond([
-            "status" => "Valid",
-            "token" => $user_auth_token
+            "status" => "1",
+            "message" => "Login Successful",
+            "token" => $user_auth_token,
+            "time" => date('Y-m-d H:i:s'),
+            "userid" => (string)$userinfo->id,
+            "uuid" => "device_paired",
+            "user_name" => $userinfo->username,
+            "user_email" => $userinfo->email ?? "null"
         ]);
     }
 

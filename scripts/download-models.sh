@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 # Default model directory inside ml/
 MODEL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/ml/models"

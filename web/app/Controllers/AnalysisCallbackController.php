@@ -260,39 +260,19 @@ class AnalysisCallbackController extends BaseController
             $db->table('tbl_Sms')->where('sms__id', $transId)->update(['sms_transaction_type' => $category]);
         }
 
-        // Retroactively apply to all past transactions owned by this user's tokens
+        // Retroactively apply to all past transactions owned by this user
         // that share the same counterparty name (exact match or LIKE for 'contains')
-        $userTokenHashes = [];
         if ($userId) {
-            $identities = $db->table('auth_identities')
-                ->select('secret')
-                ->where('user_id', $userId)
-                ->where('type', \CodeIgniter\Shield\Authentication\Authenticators\AccessTokens::ID_TYPE_ACCESS_TOKEN)
-                ->get()->getResultArray();
-            $userTokenHashes = array_column($identities, 'secret');
-        }
-
-        if (!empty($userTokenHashes)) {
-            // Resolve hashes back to raw device tokens stored in tbl_Devices
-            $devicesQuery = $db->table('tbl_Devices')
-                ->select('device_token')
-                ->whereIn('device_token', array_map(fn($h) => $h, $userTokenHashes))
-                ->get()->getResultArray();
-            $deviceTokens = array_column($devicesQuery, 'device_token');
-
-            if (!empty($deviceTokens)) {
-                // Find matching SMS by counterparty and owned device tokens
-                $smsBuilder = $db->table('tbl_Sms')->whereIn('sms_owner', $deviceTokens);
-                if ($matchType === 'contains') {
-                    $smsBuilder->like('sms_counterparty', $keyword, 'both');
-                } else {
-                    $smsBuilder->where('sms_counterparty', $keyword);
-                }
-                $smsBuilder->update([
-                    'sms_transaction_type' => $category,
-                    'sms_category'         => $category,
-                ]);
+            $smsBuilder = $db->table('tbl_Sms')->where('sms_user_id', $userId);
+            if ($matchType === 'contains') {
+                $smsBuilder->like('sms_counterparty', $keyword, 'both');
+            } else {
+                $smsBuilder->where('sms_counterparty', $keyword);
             }
+            $smsBuilder->update([
+                'sms_transaction_type' => $category,
+                'sms_category'         => $category,
+            ]);
         }
 
         return $this->response->setJSON([

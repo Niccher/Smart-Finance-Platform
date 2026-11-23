@@ -65,12 +65,15 @@ class Notifications extends BaseController
             ['key' => 'email_smtp_host', 'value' => $config['smtp_host'], 'type' => 'string', 'description' => 'SMTP server host'],
             ['key' => 'email_smtp_port', 'value' => $config['smtp_port'], 'type' => 'integer', 'description' => 'SMTP server port'],
             ['key' => 'email_smtp_user', 'value' => $config['smtp_user'], 'type' => 'string', 'description' => 'SMTP username'],
-            ['key' => 'email_smtp_pass', 'value' => $config['smtp_pass'], 'type' => 'string', 'description' => 'SMTP password'],
             ['key' => 'email_smtp_crypto', 'value' => $config['smtp_crypto'], 'type' => 'string', 'description' => 'SMTP encryption (tls/ssl/none)'],
             ['key' => 'email_from_email', 'value' => $config['from_email'], 'type' => 'string', 'description' => 'From email address'],
             ['key' => 'email_from_name', 'value' => $config['from_name'], 'type' => 'string', 'description' => 'From display name'],
             ['key' => 'email_enabled', 'value' => $config['enabled'] ? '1' : '0', 'type' => 'boolean', 'description' => 'Enable email notifications'],
         ];
+
+        if ($config['smtp_pass'] !== '') {
+            $updates[] = ['key' => 'email_smtp_pass', 'value' => $config['smtp_pass'], 'type' => 'string', 'description' => 'SMTP password'];
+        }
 
         foreach ($updates as $u) {
             $db->table('tbl_Settings')->upsert($u);

@@ -8,10 +8,10 @@ class Budget extends BaseController
 {
     public function index()
     {
-        $userId  = auth()->user()->id;
+        $userId  = (int) auth()->user()->id;
         $mod     = new BudgetModel();
         $budgets = $mod->getBudgets($userId);
-        $progress = $mod->getBudgetProgress($budgets);
+        $progress = $mod->getBudgetProgress($budgets, $userId);
 
         $categories = [
             'Total Outflow', 'Received', 'Paybill', 'Till',
@@ -29,7 +29,7 @@ class Budget extends BaseController
 
     public function save()
     {
-        $userId = auth()->user()->id;
+        $userId = (int) auth()->user()->id;
         $mod    = new BudgetModel();
         $post   = $this->request->getPost();
 
@@ -47,16 +47,17 @@ class Budget extends BaseController
             'rollover'     => !empty($post['rollover']) ? 1 : 0,
         ];
 
-        $mod->saveBudget($data);
+        $mod->saveBudget($data, $userId);
         return redirect()->to('/dashboard/budget')->with('success', 'Budget saved successfully.');
     }
 
     public function delete()
     {
+        $userId = (int) auth()->user()->id;
         $id = (int)$this->request->getPost('id');
         if ($id > 0) {
             $mod = new BudgetModel();
-            $mod->deleteBudget($id);
+            $mod->deleteBudget($id, $userId);
         }
         return redirect()->to('/dashboard/budget')->with('success', 'Budget removed.');
     }

@@ -17,10 +17,26 @@ class InsightModel extends Model
         return is_numeric($smsTime) ? (int)$smsTime : (strtotime((string)$smsTime) ?: time());
     }
 
+    private function applyScope($builder, ?string $deviceToken = null, ?int $userId = null): bool {
+        if ($userId !== null && $userId > 0) {
+            $builder->where('sms_user_id', $userId);
+            return true;
+        }
+        if (!empty($deviceToken)) {
+            $builder->where('sms_owner', $deviceToken);
+            return true;
+        }
+        if (function_exists('auth') && auth()->loggedIn() && auth()->id()) {
+            $builder->where('sms_user_id', (int)auth()->id());
+            return true;
+        }
+        return false;
+    }
+
     /**
      * Spending Trends (This month vs Last month outflow)
      */
-    public function getSpendingTrends(?string $deviceToken = null): array {
+    public function getSpendingTrends(?string $deviceToken = null, ?int $userId = null): array {
         $now = time();
         $thisMonthStart = mktime(0, 0, 0, (int)date('m', $now), 1, (int)date('Y', $now));
         $lastMonthStart = mktime(0, 0, 0, (int)date('m', $now) - 1, 1, (int)date('Y', $now));
@@ -31,7 +47,14 @@ class InsightModel extends Model
         $builder = $this->db->table('tbl_Sms')
             ->select('sms_amount, sms_direction, sms_time, sms_trans_date')
             ->where('sms_is_finance', 1);
-        if ($deviceToken) $builder->where('sms_owner', $deviceToken);
+        if (!$this->applyScope($builder, $deviceToken, $userId)) {
+            return [
+                'this_month' => 0.0,
+                'last_month' => 0.0,
+                'percentage' => 0.0,
+                'trend'      => 'flat'
+            ];
+        }
         $allSms = $builder->get()->getResult();
         
         foreach ($allSms as $sms) {
@@ -62,7 +85,7 @@ class InsightModel extends Model
     /**
      * Recurring Payments Detector
      */
-    public function getRecurringPayments(?string $deviceToken = null): array {
+    public function getRecurringPayments(?string $deviceToken = null, ?int $userId = null): array {
         $builder = $this->db->table('tbl_Sms')
             ->select('sms_counterparty as counterparty, sms_amount as amount, COUNT(*) as occurs, MAX(sms_trans_date) as last_paid')
             ->where('sms_is_finance', 1)
@@ -71,8 +94,8 @@ class InsightModel extends Model
             ->where('sms_counterparty !=', '')
             ->where('sms_counterparty !=', 'Unknown');
 
-        if ($deviceToken) {
-            $builder->where('sms_owner', $deviceToken);
+        if (!$this->applyScope($builder, $deviceToken, $userId)) {
+            return [];
         }
 
         $builder->groupBy('sms_counterparty, sms_amount')
@@ -86,13 +109,15 @@ class InsightModel extends Model
     /**
      * Smart Alerts Engine
      */
-    public function getSmartAlerts(?string $deviceToken = null): array {
+    public function getSmartAlerts(?string $deviceToken = null, ?int $userId = null): array {
         $alerts = [];
         $builder = $this->db->table('tbl_Sms')
             ->select('sms_amount, sms_balance, sms_direction, sms_transaction_type, sms_time, sms_trans_date, sms_counterparty')
             ->where('sms_is_finance', 1)
             ->orderBy('id', 'DESC');
-        if ($deviceToken) $builder->where('sms_owner', $deviceToken);
+        if (!$this->applyScope($builder, $deviceToken, $userId)) {
+            return $alerts;
+        }
         $allSms = $builder->get()->getResult();
         
         if (empty($allSms)) return $alerts;
@@ -269,11 +294,17 @@ class InsightModel extends Model
     /**
      * AI Financial Health Score (0-100)
      */
-    public function getFinancialHealthScore(?string $deviceToken = null): array {
+    public function getFinancialHealthScore(?string $deviceToken = null, ?int $userId = null): array {
         $builder = $this->db->table('tbl_Sms')
             ->select('sms_amount, sms_direction, sms_transaction_type')
             ->where('sms_is_finance', 1);
-        if ($deviceToken) $builder->where('sms_owner', $deviceToken);
+        if (!$this->applyScope($builder, $deviceToken, $userId)) {
+            return [
+                'score' => 50,
+                'color' => '#FFA502',
+                'tips'  => ['Awaiting financial transaction data to calculate accurate score.']
+            ];
+        }
         $allSms = $builder->get()->getResult();
         
         $score = 100;

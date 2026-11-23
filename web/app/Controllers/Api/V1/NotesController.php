@@ -12,7 +12,7 @@ class NotesController extends BaseApiController
         $user = $this->getUserFromToken();
         if (!$user) return $this->failUnauthorized('Invalid token');
 
-        $note = (new NoteModel())->getForSms($smsId);
+        $note = (new NoteModel())->getForSms($smsId, (int)$user->id);
         return $this->respond([
             'status' => '1',
             'note' => $note['note'] ?? '',

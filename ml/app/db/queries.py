@@ -37,11 +37,20 @@ def _parse_date_to_mysql(raw: Optional[str]) -> Optional[str]:
             h = 0
         return f"{y}-{int(mo):02d}-{int(d):02d} {h:02d}:{mi}:00"
 
-    m = re.match(r"(\d{1,2})/(\d{1,2})/(\d{2,4})", raw)
-    if m:
-        d, mo, y = m.groups()
+    # Kenyan formats without "at": "15/7/2026 10:30:00", "15/7/2026 10:30", "15/7/2026"
+    m_slash = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{2,4})(?:[ t](\d{1,2}):(\d{2})(?::(\d{2}))?)?\s*(am|pm)?", raw)
+    if m_slash:
+        d, mo, y, h, mi, s, ap = m_slash.groups()
         if len(y) == 2:
             y = "20" + y
+        if h is not None and mi is not None:
+            h = int(h)
+            if ap == "pm" and h != 12:
+                h += 12
+            elif ap == "am" and h == 12:
+                h = 0
+            s_val = int(s) if s else 0
+            return f"{y}-{int(mo):02d}-{int(d):02d} {h:02d}:{int(mi):02d}:{s_val:02d}"
         return f"{y}-{int(mo):02d}-{int(d):02d} 00:00:00"
 
     return None
@@ -801,6 +810,7 @@ async def fetch_user_financial_aggregation(owner: str) -> dict:
                 WHERE s.sms_is_transactional = 1
                   AND (
                     s.sms_owner = :owner 
+                    OR (:user_id_int != -1 AND s.sms_user_id = :user_id_int)
                     OR (
                         :user_id_int != -1 
                         AND s.sms_owner IN (
@@ -823,6 +833,7 @@ async def fetch_user_financial_aggregation(owner: str) -> dict:
                 WHERE s.sms_is_transactional = 1
                   AND (
                     s.sms_owner = :owner 
+                    OR (:user_id_int != -1 AND s.sms_user_id = :user_id_int)
                     OR (
                         :user_id_int != -1 
                         AND s.sms_owner IN (

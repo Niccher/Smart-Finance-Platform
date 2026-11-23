@@ -186,68 +186,72 @@ class Users extends BaseController
         $smsDeleted = 0;
         $transactionsDeleted = 0;
         $filesDeleted = 0;
-        if (!empty($secretList)) {
-            $sub = "SELECT secret FROM auth_identities WHERE user_id = " . (int)$id;
-            if ($db->tableExists('tbl_Sms')) {
-                $smsDeleted = (int)$db->query("SELECT COUNT(*) AS cnt FROM tbl_Sms WHERE SHA2(sms_owner, 256) IN ($sub)")->getRow()->cnt;
-            }
-            if ($db->tableExists('tbl_Loot')) {
-                $filesDeleted = (int)$db->query("SELECT COUNT(*) AS cnt FROM tbl_Loot WHERE SHA2(loot_Owner, 256) IN ($sub)")->getRow()->cnt;
-            }
-            if ($db->tableExists('tbl_Analyzed_Transactions') && $db->tableExists('tbl_Sms')) {
-                $q = "SELECT COUNT(DISTINCT a.id) AS cnt
-                      FROM tbl_Analyzed_Transactions a
-                      INNER JOIN tbl_Sms s ON s.id = a.orig_sms_int_id OR s.sms__id = a.orig_sms_id
-                      WHERE SHA2(s.sms_owner, 256) IN ($sub)";
-                $transactionsDeleted = (int)$db->query($q)->getRow()->cnt;
-            }
+        $idInt = (int)$id;
+        $sub = "SELECT secret FROM auth_identities WHERE user_id = ?";
+        if ($db->tableExists('tbl_Sms')) {
+            $smsDeleted = (int)$db->query(
+                "SELECT COUNT(*) AS cnt FROM tbl_Sms WHERE sms_user_id = ? OR SHA2(sms_owner, 256) IN ($sub)",
+                [$idInt, $idInt]
+            )->getRow()->cnt;
+        }
+        if ($db->tableExists('tbl_Loot')) {
+            $filesDeleted = (int)$db->query(
+                "SELECT COUNT(*) AS cnt FROM tbl_Loot WHERE loot_user_id = ? OR SHA2(loot_Owner, 256) IN ($sub)",
+                [$idInt, $idInt]
+            )->getRow()->cnt;
+        }
+        if ($db->tableExists('tbl_Analyzed_Transactions') && $db->tableExists('tbl_Sms')) {
+            $q = "SELECT COUNT(DISTINCT a.id) AS cnt
+                  FROM tbl_Analyzed_Transactions a
+                  INNER JOIN tbl_Sms s ON s.id = a.orig_sms_int_id OR s.sms__id = a.orig_sms_id
+                  WHERE s.sms_user_id = ? OR SHA2(s.sms_owner, 256) IN ($sub)";
+            $transactionsDeleted = (int)$db->query($q, [$idInt, $idInt])->getRow()->cnt;
         }
 
         $db->transStart();
 
         $failedQuery = null;
 
-        if (!empty($secretList)) {
-            $sub = "SELECT secret FROM auth_identities WHERE user_id = " . (int)$id;
+        // Child tables that reference tbl_Sms (deleted first).
+        // tbl_Analyzed_Transactions & tbl_Sms_Classification are now views
+        // derived from tbl_Sms — the raw SMS delete below removes them.
+        if ($db->tableExists('tbl_Sms_Processing') && $db->tableExists('tbl_Sms')) {
+            $q = "DELETE FROM tbl_Sms_Processing WHERE sms_id IN (SELECT id FROM tbl_Sms WHERE sms_user_id = ? OR SHA2(sms_owner, 256) IN ($sub))";
+            if ($db->query($q, [$idInt, $idInt]) === false) $failedQuery = $q . ' → ' . json_encode($db->error());
+        }
 
-            // Child tables that reference tbl_Sms (deleted first).
-            // tbl_Analyzed_Transactions & tbl_Sms_Classification are now views
-            // derived from tbl_Sms — the raw SMS delete below removes them.
-            if ($db->tableExists('tbl_Sms_Processing') && $db->tableExists('tbl_Sms')) {
-                $q = "DELETE FROM tbl_Sms_Processing WHERE sms_id IN (SELECT id FROM tbl_Sms WHERE SHA2(sms_owner, 256) IN ($sub))";
-                if ($db->query($q) === false) $failedQuery = $q . ' → ' . json_encode($db->error());
+        // Parent owner rows.
+        // Delete physical uploaded files before removing the Loot rows.
+        if ($db->tableExists('tbl_Loot')) {
+            $loots = $db->query(
+                "SELECT loot_Name FROM tbl_Loot WHERE loot_user_id = ? OR SHA2(loot_Owner, 256) IN ($sub)",
+                [$idInt, $idInt]
+            )->getResult();
+            foreach ($loots as $loot) {
+                try {
+                    service('storage')->deletePayload($loot->loot_Name);
+                } catch (\Throwable $e) {}
+                $filePathTxt = WRITEPATH . 'uploads/payloads/' . ltrim($loot->loot_Name, '/');
+                $filePathJson = str_replace('.txt', '.json', $filePathTxt);
+                if (file_exists($filePathTxt)) unlink($filePathTxt);
+                if (file_exists($filePathJson)) unlink($filePathJson);
             }
-
-            // Parent owner rows.
-            // Delete physical uploaded files before removing the Loot rows.
-            if ($db->tableExists('tbl_Loot')) {
-                $loots = $db->query("SELECT loot_Name FROM tbl_Loot WHERE SHA2(loot_Owner, 256) IN ($sub)")->getResult();
-                foreach ($loots as $loot) {
-                    try {
-                        service('storage')->deletePayload($loot->loot_Name);
-                    } catch (\Throwable $e) {}
-                    $filePathTxt = WRITEPATH . 'uploads/payloads/' . ltrim($loot->loot_Name, '/');
-                    $filePathJson = str_replace('.txt', '.json', $filePathTxt);
-                    if (file_exists($filePathTxt)) unlink($filePathTxt);
-                    if (file_exists($filePathJson)) unlink($filePathJson);
-                }
-            }
-            if ($db->tableExists('tbl_Loot')) {
-                $q = "DELETE FROM tbl_Loot WHERE SHA2(loot_Owner, 256) IN ($sub)";
-                if ($db->query($q) === false) $failedQuery = $q . ' → ' . json_encode($db->error());
-            }
-            if ($db->tableExists('tbl_Loot_Summary') && $db->tableExists('tbl_Loot')) {
-                $q = "DELETE FROM tbl_Loot_Summary WHERE loot_Uuid IN (SELECT loot_Uuid FROM tbl_Loot WHERE SHA2(loot_Owner, 256) IN ($sub))";
-                if ($db->query($q) === false) $failedQuery = $q . ' → ' . json_encode($db->error());
-            }
-            if ($db->tableExists('tbl_Sms')) {
-                $q = "DELETE FROM tbl_Sms WHERE SHA2(sms_owner, 256) IN ($sub)";
-                if ($db->query($q) === false) $failedQuery = $q . ' → ' . json_encode($db->error());
-            }
-            if ($db->tableExists('tbl_Sender_Profiles')) {
-                $q = "DELETE FROM tbl_Sender_Profiles WHERE SHA2(sp_owner, 256) IN ($sub)";
-                if ($db->query($q) === false) $failedQuery = $q . ' → ' . json_encode($db->error());
-            }
+        }
+        if ($db->tableExists('tbl_Loot_Summary') && $db->tableExists('tbl_Loot')) {
+            $q = "DELETE FROM tbl_Loot_Summary WHERE loot_Uuid IN (SELECT loot_Uuid FROM tbl_Loot WHERE loot_user_id = ? OR SHA2(loot_Owner, 256) IN ($sub))";
+            if ($db->query($q, [$idInt, $idInt]) === false) $failedQuery = $q . ' → ' . json_encode($db->error());
+        }
+        if ($db->tableExists('tbl_Loot')) {
+            $q = "DELETE FROM tbl_Loot WHERE loot_user_id = ? OR SHA2(loot_Owner, 256) IN ($sub)";
+            if ($db->query($q, [$idInt, $idInt]) === false) $failedQuery = $q . ' → ' . json_encode($db->error());
+        }
+        if ($db->tableExists('tbl_Sms')) {
+            $q = "DELETE FROM tbl_Sms WHERE sms_user_id = ? OR SHA2(sms_owner, 256) IN ($sub)";
+            if ($db->query($q, [$idInt, $idInt]) === false) $failedQuery = $q . ' → ' . json_encode($db->error());
+        }
+        if ($db->tableExists('tbl_Sender_Profiles')) {
+            $q = "DELETE FROM tbl_Sender_Profiles WHERE SHA2(sp_owner, 256) IN ($sub)";
+            if ($db->query($q, [$idInt]) === false) $failedQuery = $q . ' → ' . json_encode($db->error());
         }
 
         foreach (['tbl_Processing_Jobs', 'tbl_User_Settings', 'tbl_User_Devices'] as $t) {

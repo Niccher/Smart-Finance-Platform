@@ -24,8 +24,22 @@ class CryptoHelper
 
         $options = OPENSSL_RAW_DATA;
 
-        // Build candidate key list (configured key first, followed by known Android app defaults)
-        $candidates = [$this->cryptKey, 'a:r2yt>N3_\\Py,f=', 'a:r2yt>N3_\Py,f='];
+        /**
+         * Candidate key list.
+         * Why: In Android Kotlin/Java source code, the hardcoded fallback encryption key literal
+         * contains a backslash: "a:r2yt>N3_\\Py,f=". In Java/Kotlin string parsing, "\\\\"
+         * represents a single backslash character '\'. However, depending on whether .env / docker-compose
+         * environment variables are quoted with single or double quotes, PHP may receive either:
+         * 1) 'a:r2yt>N3_\Py,f=' (single backslash, length 16 bytes)
+         * 2) 'a:r2yt>N3_\\Py,f=' (literal double backslash, length 17 bytes)
+         * Both variations and hex-decoded variants are tested in order to preserve zero-downtime
+         * compatibility with all Android client build variants.
+         */
+        $candidates = [
+            $this->cryptKey,
+            'a:r2yt>N3_\\Py,f=',
+            'a:r2yt>N3_\Py,f='
+        ];
         if (ctype_xdigit($this->cryptKey) && strlen($this->cryptKey) === 32) {
             $candidates[] = hex2bin($this->cryptKey);
         }

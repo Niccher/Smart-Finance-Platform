@@ -21,6 +21,11 @@ class CreateTblCategoryRules extends Migration
                 'unsigned'       => true,
                 'auto_increment' => true,
             ],
+            'user_id' => [
+                'type'       => 'INT',
+                'unsigned'   => true,
+                'null'       => true,
+            ],
             'keyword' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 255,
@@ -29,6 +34,25 @@ class CreateTblCategoryRules extends Migration
                 'type'       => 'VARCHAR',
                 'constraint' => 100,
             ],
+            'match_type' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 20,
+                'default'    => 'exact',
+            ],
+            'rule_source' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 20,
+                'default'    => 'user',
+            ],
+            'hit_count' => [
+                'type'       => 'INT',
+                'unsigned'   => true,
+                'default'    => 0,
+            ],
+            'last_matched_at' => [
+                'type' => 'DATETIME',
+                'null' => true,
+            ],
             'created_at' => [
                 'type' => 'DATETIME',
                 'null' => true,
@@ -36,7 +60,8 @@ class CreateTblCategoryRules extends Migration
         ]);
 
         $this->forge->addPrimaryKey('id');
-        $this->forge->addUniqueKey('keyword');
+        $this->forge->addKey(['user_id', 'keyword']);
+        $this->forge->addKey('keyword');
         $this->forge->createTable('tbl_Category_Rules', true);
     }
 

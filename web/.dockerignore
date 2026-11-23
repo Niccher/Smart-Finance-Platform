@@ -13,6 +13,11 @@ writable/debugbar/*
 writable/uploads/*
 writable/exports/*
 writable/backups/*
+*.log
+*.tmp
+*.temp
+*.bak
+*.pph
 !writable/logs/index.html
 !writable/cache/index.html
 !writable/session/index.html
