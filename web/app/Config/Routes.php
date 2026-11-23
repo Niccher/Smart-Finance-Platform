@@ -295,10 +295,11 @@ $routes->group('', ['namespace' => '\CodeIgniter\Shield\Controllers'], static fu
     $routes->get('register', 'RegisterController::registerView', ['as' => 'register']);
     $routes->post('register', 'RegisterController::registerAction');
     
-    // Auth Actions (2FA, Email Activation)
-    $routes->get('auth/a/show', 'ActionController::show', ['as' => 'auth-action-show']);
-    $routes->post('auth/a/handle', 'ActionController::handle', ['as' => 'auth-action-handle']);
-    $routes->post('auth/a/verify', 'ActionController::verify', ['as' => 'auth-action-verify']);
+    // Auth Actions (2FA, Email Activation, Direct Verification)
+    $routes->get('auth/a/show', '\App\Controllers\ActionController::show', ['as' => 'auth-action-show']);
+    $routes->post('auth/a/handle', '\App\Controllers\ActionController::handle', ['as' => 'auth-action-handle']);
+    $routes->post('auth/a/verify', '\App\Controllers\ActionController::verify', ['as' => 'auth-action-verify']);
+    $routes->post('auth/a/resend', '\App\Controllers\ActionController::resend', ['as' => 'auth-action-resend']);
     
     // Forgot Password / Magic Link (support both /magic-link and /login/magic-link)
     $routes->get('magic-link', 'MagicLinkController::loginView', ['as' => 'magic-link']);
