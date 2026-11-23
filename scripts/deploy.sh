@@ -246,11 +246,12 @@ ML_PORT=$(grep "^ML_MPESA_ANALYZER_API_PORT" .env 2>/dev/null | cut -d'=' -f2 | 
 DOZZLE_PORT=$(grep "^DOZZLE_PORT" .env 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo "8888")
 [ -z "$DOZZLE_PORT" ] && DOZZLE_PORT="8888"
 
-# Format baseURL cleanly (omit :80 if standard HTTP)
-if [ "$WEB_PORT" = "80" ]; then
-    BASE_URL="http://${DETECTED_IP}/"
+# Format baseURL cleanly — prefer https://smartfinance.local/ for local SSL gateway
+CURR_BASE_URL=$(grep "^app.baseURL" .env 2>/dev/null | cut -d'=' -f2 | tr -d " '\"" || true)
+if [ -z "$CURR_BASE_URL" ] || [[ "$CURR_BASE_URL" =~ ^https?://[0-9]+\.[0-9]+ ]] || [ "$CURR_BASE_URL" = "http://localhost:8080/" ]; then
+    BASE_URL="https://smartfinance.local/"
 else
-    BASE_URL="http://${DETECTED_IP}:${WEB_PORT}/"
+    BASE_URL="$CURR_BASE_URL"
 fi
 
 set_env "WEB_PORT" "$WEB_PORT"

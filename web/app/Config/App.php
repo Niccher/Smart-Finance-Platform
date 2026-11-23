@@ -31,7 +31,11 @@ class App extends BaseConfig
      * @var string[]
      * @phpstan-var list<string>
      */
-    public array $allowedHostnames = [];
+    public array $allowedHostnames = [
+        'smartfinance.local',
+        'localhost',
+        '127.0.0.1',
+    ];
 
     /**
      * --------------------------------------------------------------------------
@@ -338,7 +342,13 @@ class App extends BaseConfig
      *
      * @var array<string, string>
      */
-    public array $proxyIPs = [];
+    public array $proxyIPs = [
+        '0.0.0.0/0'       => 'X-Forwarded-For',
+        '10.0.0.0/8'      => 'X-Forwarded-For',
+        '172.16.0.0/12'   => 'X-Forwarded-For',
+        '192.168.0.0/16'  => 'X-Forwarded-For',
+        '127.0.0.1'       => 'X-Forwarded-For',
+    ];
 
     /**
      * --------------------------------------------------------------------------
@@ -451,11 +461,16 @@ class App extends BaseConfig
         if (isset($_SERVER['RAILWAY_PUBLIC_DOMAIN'])) {
             $this->baseURL = 'https://' . $_SERVER['RAILWAY_PUBLIC_DOMAIN'] . '/';
         } elseif (isset($_SERVER['HTTP_HOST'])) {
-            $protocol = (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') || (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+            $protocol = (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+                     || (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                     ? 'https://' : 'http://';
             $this->baseURL = $protocol . $_SERVER['HTTP_HOST'] . '/';
         }
 
-        // Allow .env to override the dynamic URL if explicitly set
-        $this->baseURL = env('app.baseURL', $this->baseURL);
+        // Allow .env to override only if explicitly set and not a bare public/LAN IP address
+        $envBaseUrl = env('app.baseURL');
+        if (!empty($envBaseUrl) && !preg_match('/^https?:\/\/[0-9]+\.[0-9]+/', $envBaseUrl) && $envBaseUrl !== 'http://localhost:8080/') {
+            $this->baseURL = rtrim($envBaseUrl, '/') . '/';
+        }
     }
 }
