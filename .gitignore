@@ -58,6 +58,8 @@ models/*.gguf
 models/*.bin
 ml/models/*.gguf
 ml/models/*.bin
+ml/models/*.tmp
+ml/models/chroma_db/
 llama-bin/*.dll
 llama-bin/*.dylib
 ml/llama-bin/*.dll

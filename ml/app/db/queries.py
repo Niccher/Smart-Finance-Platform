@@ -857,3 +857,32 @@ async def fetch_user_financial_aggregation(owner: str) -> dict:
             "total_transaction_volume": float(row[3] or 0.0) if row else 0.0,
             "transaction_types": types,
         }
+
+
+async def fetch_analyzed_transactions_for_indexing(user_id: str, limit: int = 500) -> list[dict]:
+    """Fetch recent analyzed transactions for ChromaDB semantic vector indexing."""
+    from app.db.connection import get_engine
+    from sqlalchemy import text
+    engine = get_engine()
+    user_id_int = int(user_id) if str(user_id).isdigit() else -1
+    async with engine.connect() as conn:
+        stmt = text("""
+            SELECT 
+                s.sms_id AS id,
+                s.sms_text AS body,
+                COALESCE(s.sms_counterparty, s.sms_sender) AS counterparty,
+                COALESCE(s.sms_category, 'Uncategorized') AS category,
+                COALESCE(s.sms_amount, 0.0) AS amount,
+                COALESCE(s.sms_direction, 'none') AS direction,
+                s.sms_user_id AS user_id,
+                COALESCE(s.sms_date, s.sms_created_at) AS date
+            FROM tbl_Sms s
+            WHERE (:user_id_int = -1 OR s.sms_user_id = :user_id_int)
+              AND s.sms_category IS NOT NULL
+              AND s.sms_category != ''
+            ORDER BY s.sms_id DESC
+            LIMIT :limit
+        """)
+        result = await conn.execute(stmt, {"user_id_int": user_id_int, "limit": limit})
+        rows = result.mappings().fetchall()
+        return [dict(r) for r in rows]

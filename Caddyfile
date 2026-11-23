@@ -1,0 +1,71 @@
+{
+    # Global options
+    admin off
+    # Allow both HTTP and HTTPS without forced redirect loops for local dev
+    auto_https disable_redirects
+}
+
+# ── HTTPS: smartfinance.local & localhost ────────────────────────
+https://smartfinance.local, https://localhost, https://127.0.0.1 {
+    # Generate trusted local TLS certificate using Caddy's built-in internal CA
+    tls internal
+
+    # Gzip and Zstandard compression
+    encode gzip zstd
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # Dozzle real-time container log monitoring
+    handle /logs* {
+        reverse_proxy dozzle:8080 {
+            flush_interval -1
+        }
+    }
+
+    # ML Microservice Swagger documentation and API
+    handle_path /ml* {
+        reverse_proxy ml:9050
+    }
+
+    # Default: Proxy all web requests and API endpoints to CodeIgniter 4
+    handle {
+        reverse_proxy web:80 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+}
+
+# ── HTTP Fallback (Port 80) ──────────────────────────────────────
+# Handles localhost, smartfinance.local, emulator (10.0.2.2), and LAN IP for mobile testing
+:80 {
+    encode gzip zstd
+
+    handle /logs* {
+        reverse_proxy dozzle:8080 {
+            flush_interval -1
+        }
+    }
+
+    handle_path /ml* {
+        reverse_proxy ml:9050
+    }
+
+    handle {
+        reverse_proxy web:80 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+}

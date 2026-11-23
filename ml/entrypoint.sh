@@ -80,5 +80,11 @@ if ! kill -0 "${LLAMA_PID}" 2>/dev/null; then
     exit 1
 fi
 
+echo "Starting Huey async background worker..."
+(huey_consumer.py app.tasks.huey_app.huey -w 2 -k thread -d 0.1 2>&1 || \
+ huey_consumer app.tasks.huey_app.huey -w 2 -k thread -d 0.1 2>&1 || \
+ python -m huey.bin.huey_consumer app.tasks.huey_app.huey -w 2 -k thread -d 0.1 2>&1) &
+HUEY_PID=$!
+
 echo "Starting FastAPI app on port 9050..."
 exec uvicorn app.main:app --host 0.0.0.0 --port 9050 --reload

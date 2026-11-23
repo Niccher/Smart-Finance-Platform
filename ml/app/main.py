@@ -480,6 +480,7 @@ openapi_tags = [
 
 app = FastAPI(
     title="Universal Financial Intelligence Microservice",
+    root_path=os.getenv("FASTAPI_ROOT_PATH", ""),
     description="""
 ### 🧠 Universal Multi-Channel Financial Analytics Microservice
 
@@ -535,6 +536,54 @@ async def health():
         llm_model=settings.llm_model,
         db_configured=db_ok,
     )
+
+
+@app.get("/health/worker")
+def health_worker():
+    """Returns Huey async worker queue depth and status."""
+    from app.tasks.huey_app import huey
+    try:
+        pending = huey.pending_count()
+        return {
+            "status": "ok",
+            "queue_name": huey.name,
+            "pending_tasks": pending,
+        }
+    except Exception as e:
+        return {
+            "status": "degraded",
+            "error": str(e),
+        }
+
+
+@app.get("/api/v1/search/semantic")
+def search_semantic_transactions(
+    q: str,
+    limit: int = 5,
+    user_id: Optional[str] = None
+):
+    """Performs semantic similarity search over indexed transactions."""
+    from app.services.vector_store import vector_store
+    results = vector_store.search_semantic(query=q, n_results=limit, user_id=user_id)
+    return {
+        "status": "success",
+        "query": q,
+        "count": len(results),
+        "results": results
+    }
+
+
+@app.post("/api/v1/vectors/reindex-all")
+async def reindex_all_vectors(user_id: Optional[str] = None, limit: int = 1000):
+    """Bulk indexes transactions into ChromaDB vector store."""
+    from app.db.queries import fetch_analyzed_transactions_for_indexing
+    from app.services.vector_store import vector_store
+    txs = await fetch_analyzed_transactions_for_indexing(user_id or "-1", limit=limit)
+    count = vector_store.index_transactions(txs)
+    return {
+        "status": "success",
+        "indexed_count": count
+    }
 
 
 @app.post("/process/trigger")
@@ -626,9 +675,14 @@ async def process_for_user(user_id: str, job_id: Optional[int] = None):
         job_id = await create_job(user_id)
     await update_job(job_id, status="starting", started_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-    # Spawn the actual work as a detached background task.
-    # The HTTP response is sent NOW; the task runs independently.
-    asyncio.ensure_future(_run_user_job(user_id, job_id, user_lock))
+    # Spawn work via Huey Redis worker with in-process asyncio fallback
+    try:
+        from app.tasks.sms_tasks import run_user_processing_task
+        run_user_processing_task(user_id, job_id)
+        logger.info(f"Enqueued job {job_id} for user {user_id} into Huey worker queue.")
+    except Exception as eq:
+        logger.warning(f"Could not enqueue job to Huey ({eq}); falling back to in-process asyncio.")
+        asyncio.ensure_future(_run_user_job(user_id, job_id, user_lock))
 
     return ProcessingJobResponse(
         job_id=job_id,
@@ -796,6 +850,17 @@ async def _run_user_job(user_id: str, job_id: int, user_lock: asyncio.Lock):
                 metadata=meta,
             )
             logger.info(f"Job {job_id} for user {user_id} completed: {total_messages_processed} messages, {total_errors} errors, {elapsed}s")
+
+            # Dispatch newly analyzed transactions to vector indexing for semantic search
+            try:
+                from app.db.queries import fetch_analyzed_transactions_for_indexing
+                from app.tasks.sms_tasks import index_transactions_vector_task
+                txs_to_index = await fetch_analyzed_transactions_for_indexing(user_id, limit=200)
+                if txs_to_index:
+                    index_transactions_vector_task(txs_to_index)
+                    logger.info(f"Dispatched {len(txs_to_index)} transactions to Huey vector indexing task.")
+            except Exception as ev:
+                logger.warning(f"Vector indexing dispatch notice: {ev}")
 
         except Exception as e:
             elapsed = int((datetime.now() - start).total_seconds())

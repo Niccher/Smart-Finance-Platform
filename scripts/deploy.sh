@@ -98,17 +98,17 @@ finish_deployment() {
 
 # ── 1. Detect Dynamic IP ──────────────────────────────────────
 section "1. Detecting Dynamic IP"
-DETECTED_IP=$(curl -s --max-time 5 ip.me 2>/dev/null | tr -d '[:space:]' || true)
-if [ -z "$DETECTED_IP" ]; then
-    DETECTED_IP=$(curl -s --max-time 5 ifconfig.me 2>/dev/null | tr -d '[:space:]' || true)
+DETECTED_IP=$(curl -4 -s --max-time 3 ifconfig.me 2>/dev/null | tr -d '[:space:]' || true)
+if [ -z "$DETECTED_IP" ] || [[ "$DETECTED_IP" =~ : ]]; then
+    DETECTED_IP=$(curl -4 -s --max-time 3 icanhazip.com 2>/dev/null | tr -d '[:space:]' || true)
 fi
-if [ -z "$DETECTED_IP" ]; then
-    DETECTED_IP=$(curl -s --max-time 5 icanhazip.com 2>/dev/null | tr -d '[:space:]' || true)
+if [ -z "$DETECTED_IP" ] || [[ "$DETECTED_IP" =~ : ]]; then
+    DETECTED_IP=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{print $7}' | tr -d '[:space:]' || true)
 fi
-if [ -z "$DETECTED_IP" ]; then
-    DETECTED_IP=$(hostname -I 2>/dev/null | awk '{print $1}' | tr -d '[:space:]' || true)
+if [ -z "$DETECTED_IP" ] || [[ "$DETECTED_IP" =~ : ]]; then
+    DETECTED_IP=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -v ':' | head -n1 | tr -d '[:space:]' || true)
 fi
-if [ -z "$DETECTED_IP" ]; then
+if [ -z "$DETECTED_IP" ] || [[ "$DETECTED_IP" =~ : ]]; then
     DETECTED_IP="127.0.0.1"
 fi
 log "Dynamic Host IP: $DETECTED_IP"
@@ -177,10 +177,8 @@ fi
 section "3. Git Working Tree Check & Pull"
 if [ -d ".git" ]; then
     if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
-        warn "Uncommitted local changes detected in working tree. Stashing safely..."
-        git stash save "deploy-auto-stash-$(date +%Y%m%d%H%M%S)" >/dev/null 2>&1 || true
-    fi
-    if git remote | grep -q "origin"; then
+        log "Local working tree has modifications — deploying current code without stashing."
+    elif git remote | grep -q "origin"; then
         log "Pulling latest changes from origin..."
         PULL_LOG=$(git pull origin main 2>&1) || warn "Could not pull from origin, continuing with local code..."
         echo "$PULL_LOG" | tail -5
@@ -218,8 +216,8 @@ if [ "$CURR_WEB" = "9002" ] || [ -z "$CURR_WEB" ]; then
 fi
 
 CURR_ML=$(grep "^ML_MPESA_ANALYZER_API_PORT" .env 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || true)
-if [ "$CURR_ML" = "9021" ] || [ -z "$CURR_ML" ]; then
-    set_env "ML_MPESA_ANALYZER_API_PORT" "8001"
+if [ "$CURR_ML" = "9021" ] || [ "$CURR_ML" = "8001" ] || [ -z "$CURR_ML" ]; then
+    set_env "ML_MPESA_ANALYZER_API_PORT" "8002"
 fi
 
 CURR_LLAMA=$(grep "^ML_MPESA_ANALYZER_LLAMA_PORT" .env 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || true)
@@ -243,8 +241,10 @@ fi
 # Resolve Ports (Default: 80 for WebApp, 8001 for ML, 3306 for MySQL)
 WEB_PORT=$(grep "^WEB_PORT" .env 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo "80")
 [ -z "$WEB_PORT" ] && WEB_PORT="80"
-ML_PORT=$(grep "^ML_MPESA_ANALYZER_API_PORT" .env 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo "8001")
-[ -z "$ML_PORT" ] && ML_PORT="8001"
+ML_PORT=$(grep "^ML_MPESA_ANALYZER_API_PORT" .env 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo "8002")
+[ -z "$ML_PORT" ] && ML_PORT="8002"
+DOZZLE_PORT=$(grep "^DOZZLE_PORT" .env 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo "8888")
+[ -z "$DOZZLE_PORT" ] && DOZZLE_PORT="8888"
 
 # Format baseURL cleanly (omit :80 if standard HTTP)
 if [ "$WEB_PORT" = "80" ]; then
@@ -264,42 +264,43 @@ set_env "DB_HOST" "mysql"
 set_env "DB_PORT" "3306"
 set_env "DB_NAME" "db_mpesa_analyzer"
 set_env "DB_USER" "root"
-set_env "ML_BACKEND_URL" "http://ml-mpesa-analyzer:9050"
+set_env "ML_BACKEND_URL" "http://ml:9050"
 
 log "app.baseURL               -> ${BASE_URL}"
 log "WEB_PORT                  -> ${WEB_PORT} (Standard HTTP)"
 log "ML_PORT                   -> ${ML_PORT} (AI Microservice API)"
-log "ML_BACKEND_URL            -> http://ml-mpesa-analyzer:9050 (Internal network)"
+log "ML_BACKEND_URL            -> http://ml:9050 (Internal network)"
 log "DB_HOST                   -> mysql (Docker internal)"
 
 # ── 5. Stop Old Containers & Clear Conflicts ──────────────────
 section "5. Stopping Old Containers & Clearing Name Conflicts"
 docker compose down --remove-orphans 2>&1 | tail -3 || true
 
-# Explicitly remove legacy container or network names if conflicting
-docker rm -f shared-mysql mpesa-analyzer-webapp ml-mpesa-analyzer 2>/dev/null || true
-docker network rm hosts-shared-network 2>/dev/null || true
+# Explicitly remove legacy and current container names to prevent name collisions
+docker rm -f smart-finance-mysql smart-finance-web smart-finance-ml smart-finance-redis smart-finance-minio smart-finance-minio-init smart-finance-dozzle smart-finance-caddy shared-mysql mpesa-analyzer-webapp ml-mpesa-analyzer mpesa-redis mpesa-minio mpesa-dozzle mpesa-caddy 2>/dev/null || true
+docker network rm smart-finance-network hosts-shared-network 2>/dev/null || true
 log "Old containers stopped and explicit name conflicts cleared"
 
 # ── 6. Build & Start Containers ───────────────────────────────
-section "6. Building & Starting All Containers"
+section "6. Pulling Base Images & Starting All Containers"
+docker compose pull --ignore-buildable 2>&1 | tail -10 || true
 docker compose up --build -d 2>&1 | tail -20
-log "Containers created and started (mysql, web, ml, redis)"
+log "Containers created and started (caddy, mysql, web, ml, redis, minio, dozzle)"
 
 echo ""
 echo -e "   ${BOLD}Docker Image Sizes:${RESET}"
-docker images --filter "reference=*mpesa*" --filter "reference=*mysql*" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" 2>/dev/null | sed 's/^/   /' || true
+docker images --filter "reference=*smart-finance*" --filter "reference=*mysql*" --filter "reference=*caddy*" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" 2>/dev/null | sed 's/^/   /' || true
 
 echo ""
 echo -e "   ${BOLD}Container Runtime Layer Sizes:${RESET}"
-docker ps --size --filter "name=mpesa" --filter "name=shared-mysql" --format "table {{.Names}}\t{{.Status}}\t{{.Size}}" 2>/dev/null | sed 's/^/   /' || true
+docker ps --size --filter "name=smart-finance" --filter "name=mpesa" --format "table {{.Names}}\t{{.Status}}\t{{.Size}}" 2>/dev/null | sed 's/^/   /' || true
 
 # ── 7. Wait for MySQL Health ──────────────────────────────────
 section "7. Waiting for MySQL to Become Healthy"
 printf "   Waiting for MySQL"
 MYSQL_HEALTHY=false
 for i in $(seq 1 40); do
-    STATUS=$(docker inspect --format='{{.State.Health.Status}}' shared-mysql 2>/dev/null || echo "missing")
+    STATUS=$(docker inspect --format='{{.State.Health.Status}}' smart-finance-mysql 2>/dev/null || docker inspect --format='{{.State.Health.Status}}' shared-mysql 2>/dev/null || echo "missing")
     if [ "$STATUS" = "healthy" ]; then
         echo ""
         log "MySQL is healthy and accepting connections"
@@ -313,10 +314,10 @@ $MYSQL_HEALTHY || { echo ""; warn "MySQL did not report healthy within timeout. 
 
 # ── 7b. Wait for Redis Health (:6379) ─────────────────────────
 section "7b. Waiting for Redis Health (:6379)"
-printf "   Checking mpesa-redis status"
+printf "   Checking Redis status"
 REDIS_HEALTHY=false
 for i in $(seq 1 15); do
-    R_STATUS=$(docker inspect --format='{{.State.Health.Status}}' mpesa-redis 2>/dev/null || echo "missing")
+    R_STATUS=$(docker inspect --format='{{.State.Health.Status}}' smart-finance-redis 2>/dev/null || docker inspect --format='{{.State.Health.Status}}' mpesa-redis 2>/dev/null || echo "missing")
     if [ "$R_STATUS" = "healthy" ]; then
         echo ""
         log "Redis in-memory cache and session store is healthy"
@@ -379,7 +380,7 @@ fi
 
 # ── 9. Wait for ML Microservice Readiness (:8001) ─────────────
 section "9. Waiting for ML Microservice Ready (:${ML_PORT})"
-printf "   Checking ml-mpesa-analyzer status"
+printf "   Checking smart-finance-ml status"
 ML_READY=false
 for i in $(seq 1 45); do
     ML_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${ML_PORT}/health 2>/dev/null || echo "000")
@@ -410,6 +411,20 @@ for i in $(seq 1 25); do
     sleep 2
 done
 $WEB_READY || { echo ""; warn "Web server did not respond in time. Check: docker compose logs web"; }
+
+# ── 10b. Verify Dozzle Log Viewer Readiness (:8888) ────────────
+section "10b. Waiting for Dozzle Log Viewer Ready (:${DOZZLE_PORT})"
+DOZZLE_READY=false
+for i in $(seq 1 15); do
+    DOZZLE_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${DOZZLE_PORT}/ 2>/dev/null || echo "000")
+    if [[ "$DOZZLE_CODE" =~ ^(200|301|302)$ ]]; then
+        log "Dozzle log viewer is operational (HTTP $DOZZLE_CODE)"
+        DOZZLE_READY=true
+        break
+    fi
+    sleep 1
+done
+$DOZZLE_READY || warn "Dozzle did not respond immediately. Check: docker compose logs dozzle"
 
 # ── 11. Container Permissions Enforcement ─────────────────────
 section "11. Setting Container Writable Directory Permissions"
@@ -447,6 +462,7 @@ FINAL_WEB=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${WEB_PORT}/
 if [ "$FINAL_WEB" = "200" ] || [ "$FINAL_WEB" = "307" ] || [ "$FINAL_WEB" = "302" ]; then
     log "PLATFORM IS LIVE — ALL SYSTEMS OPERATIONAL (WebApp HTTP ${FINAL_WEB})"
     echo ""
+    echo -e "  ${BOLD}HTTPS Secure Gateway :${RESET}  https://smartfinance.local"
     echo -e "  ${BOLD}WebApp Dashboard     :${RESET}  ${BASE_URL}"
     echo -e "  ${BOLD}AI Financial Chat    :${RESET}  ${BASE_URL}dashboard/chat"
     echo -e "  ${BOLD}Admin Telemetry      :${RESET}  ${BASE_URL}admin/telemetry"
@@ -455,6 +471,9 @@ if [ "$FINAL_WEB" = "200" ] || [ "$FINAL_WEB" = "307" ] || [ "$FINAL_WEB" = "302
     echo -e "  ${BOLD}Mobile AI Gateway    :${RESET}  ${BASE_URL}api/v1/chat"
     echo -e "  ${BOLD}ML API Swagger       :${RESET}  http://${DETECTED_IP}:${ML_PORT}/docs"
     echo -e "  ${BOLD}ML Health Probe      :${RESET}  http://${DETECTED_IP}:${ML_PORT}/health"
+    echo -e "  ${BOLD}Huey Worker Status   :${RESET}  http://${DETECTED_IP}:${ML_PORT}/health/worker"
+    echo -e "  ${BOLD}Dozzle Live Logs     :${RESET}  http://${DETECTED_IP}:${DOZZLE_PORT}"
+    echo -e "  ${BOLD}MinIO Object Console :${RESET}  http://${DETECTED_IP}:9001"
     echo -e "  ${BOLD}WebApp Health        :${RESET}  ${BASE_URL}health"
     echo -e "  ${BOLD}Redis Cache Server   :${RESET}  redis://${DETECTED_IP}:6379"
     echo ""
